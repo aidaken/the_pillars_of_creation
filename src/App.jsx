@@ -10,7 +10,7 @@ export default function App() {
 
   useEffect(() => {
     const sceneManager = new SceneManager(canvasRef.current)
-    const controls = createControls(sceneManager.camera, canvasRef.current)
+    const controls = createControls(sceneManager.camera, sceneManager.renderer.domElement)
 
     sceneManager.add(createStarField())
     sceneManager.add(createPillarPlaceholder())
