@@ -1,0 +1,84 @@
+=== PROJECT CONTEXT ===
+
+Product: Pillars of Creation: Spectral Explorer 3D
+Type: Interactive 3D web app (localhost → Vercel)
+Inspiration: Solar System Scope (solarsystemscope.com) — same fluid, 
+finger-driven 3D navigation feel.
+
+What we are building:
+A browser-based 3D experience of the Pillars of Creation (Eagle Nebula, M16).
+The user can freely orbit, zoom, and explore the Pillars in 3D using mouse 
+or touch (pinch/rotate). The scene shows three volumetric gas-and-dust pillar 
+structures surrounded by a deep-space star field. A spectral toggle switches 
+the entire scene between Hubble visible-light (blue-green palette) and Webb 
+near-infrared (orange-red palette), revealing hidden protostars only visible 
+in IR mode. Clicking a pillar opens a science info panel.
+
+What we are NOT building (MVP scope):
+- No analytics, no accessibility features, no guided tours, no gamification
+- No real FITS data yet — shapes and colors are scientifically approximated
+- No backend, no user accounts, no mobile app
+
+North Star Metric: Sessions where a user completes at least one spectral 
+toggle AND spends 30+ seconds interacting with a pillar region.
+
+Tech stack: React 18, Vite, Three.js, GLSL shaders via vite-plugin-glsl.
+AI tools in use: Claude Code, GitHub Copilot, Cursor.
+Developers: Aidar (19, leads architecture + shaders) and Akmatbek (14, 
+handles UI components, hotspot content, testing).
+Hardware: M3 MacBook Air 13-inch.
+
+Code rules:
+- No generic or AI-clichéd variable names
+- Comments only where logic is genuinely complex
+- Efficient, clean, minimal — no over-engineering
+- Every file should know its single responsibility
+
+=== TASK ===
+
+You are setting up the base repository for this project.
+We are already inside the project folder. Do the following:
+
+1. Initialize a Vite + React project in the CURRENT directory (not a subfolder).
+   Use: npm create vite@latest . -- --template react
+   Then run: npm install
+
+2. Install dependencies:
+   - three
+   - vite-plugin-glsl
+   No other dependencies for now.
+
+3. Delete all Vite boilerplate content:
+   - Clear src/App.jsx (leave a blank functional component that returns null)
+   - Clear src/App.css and src/index.css (empty files, keep them)
+   - Remove src/assets folder
+
+4. Create this exact folder structure inside src/:
+   src/
+     components/       # React UI components (toggle, hotspot panel)
+     scene/            # Three.js scene setup and render loop
+     shaders/          # GLSL shader files
+       pillar/
+       dust/
+       stars/
+     hooks/            # Custom React hooks
+     constants/        # Scene config, color palettes per spectral mode
+     utils/            # Pure helper functions
+
+5. Update vite.config.js to include glsl plugin:
+   import glsl from 'vite-plugin-glsl'
+   Add glsl() to the plugins array.
+
+6. Create README.md with these sections:
+   # Pillars of Creation: Spectral Explorer 3D
+   ## Stack
+   ## Folder Structure
+   ## Setup
+   ## Tech Decisions Log
+   ## Open Tasks
+   Fill each section accurately based on what was just set up.
+
+7. Create .gitignore that covers: node_modules, dist, .DS_Store, *.local
+
+Do not add any extra libraries. Do not modify index.html beyond Vite defaults.
+Keep everything minimal — this is the foundation everything else builds on.
