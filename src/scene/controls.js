@@ -5,8 +5,8 @@ export function createControls(camera, domElement) {
 
   controls.enableDamping = true
   controls.dampingFactor = 0.04
-  controls.minDistance = 8
-  controls.maxDistance = 120
+  controls.minDistance = 15
+  controls.maxDistance = 200
   controls.autoRotate = false
 
   return controls
