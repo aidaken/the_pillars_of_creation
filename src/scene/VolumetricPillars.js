@@ -49,23 +49,23 @@ float pillarSDF(vec3 p) {
 
   // Pillar 1 — tallest left
   float y1 = clamp(p.y, 0.0, 26.0);
-  float r1 = mix(3.5, 1.0, y1 / 26.0);
+  float r1 = mix(4.5, 1.4, y1 / 26.0);
   d = min(d, length(p.xz - vec2(-5.0, 0.5)) - r1
-        - fbm(p * 0.15 + uTime * 0.02) * 2.5
+        - fbm(p * 0.15 + uTime * 0.02) * 3.2
         + smoothstep(26.0, 22.0, p.y) * 1.5);
 
   // Pillar 2 — medium center
   float y2 = clamp(p.y, 0.0, 18.0);
-  float r2 = mix(2.8, 0.8, y2 / 18.0);
+  float r2 = mix(3.6, 1.0, y2 / 18.0);
   d = min(d, length(p.xz - vec2(1.5, 1.0)) - r2
-        - fbm(p * 0.18 + 1.7 + uTime * 0.02) * 2.2
+        - fbm(p * 0.18 + 1.7 + uTime * 0.02) * 2.8
         + smoothstep(18.0, 14.0, p.y) * 1.2);
 
   // Pillar 3 — short right
   float y3 = clamp(p.y, 0.0, 12.0);
-  float r3 = mix(2.2, 0.6, y3 / 12.0);
+  float r3 = mix(2.8, 0.8, y3 / 12.0);
   d = min(d, length(p.xz - vec2(8.0, -0.5)) - r3
-        - fbm(p * 0.22 + 3.4 + uTime * 0.02) * 1.8
+        - fbm(p * 0.22 + 3.4 + uTime * 0.02) * 2.4
         + smoothstep(12.0, 9.0, p.y) * 1.0);
 
   // Base connecting cloud
@@ -107,11 +107,11 @@ void main() {
       float rim = clamp(sdf / -3.0, 0.0, 1.0);
       sampleCol = mix(sampleCol * 1.8, sampleCol, rim);
 
-      float alpha = density * 0.06;
+      float alpha = density * 0.12;
       col.rgb += sampleCol * alpha * (1.0 - col.a);
       col.a   += alpha * (1.0 - col.a);
 
-      t += 0.4;
+      t += 0.3;
     } else {
       t += max(sdf * 0.6, 0.3);
     }
@@ -131,8 +131,8 @@ export function createVolumetricPillars(scene) {
     uniforms: {
       uCamPos:      { value: new THREE.Vector3() },
       uTime:        { value: 0 },
-      uPillarColor: { value: new THREE.Color(0.55, 0.30, 0.08) },
-      uGlowColor:   { value: new THREE.Color(0.80, 0.50, 0.15) },
+      uPillarColor: { value: new THREE.Color(0.65, 0.35, 0.08) },
+      uGlowColor:   { value: new THREE.Color(0.90, 0.60, 0.20) },
     },
     transparent: true,
     depthWrite: false,

@@ -26,7 +26,7 @@ export function createStarField() {
   for (let i = 0; i < STAR_COUNT; i++) {
     const theta = Math.random() * Math.PI * 2
     const phi   = Math.acos(2 * Math.random() - 1)
-    const r     = 280 + Math.random() * 60
+    const r     = 280 + Math.random() * 50
 
     positions[i * 3]     = r * Math.sin(phi) * Math.cos(theta)
     positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta)
