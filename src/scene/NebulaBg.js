@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { makeCircleTexture } from '../utils/makeCircleTexture'
 
-function buildCloud(count, zMin, zMax, colorFn) {
+function buildCloud(count, zMin, zMax, colorFn, size = 0.28, opacity = 0.45) {
   const positions = new Float32Array(count * 3)
   const colors = new Float32Array(count * 3)
 
@@ -21,10 +21,10 @@ function buildCloud(count, zMin, zMax, colorFn) {
 
   const mat = new THREE.PointsMaterial({
     map: makeCircleTexture(),
-    size: 0.28,
+    size,
     vertexColors: true,
     transparent: true,
-    opacity: 0.45,
+    opacity,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
     alphaTest: 0.01,
@@ -45,9 +45,9 @@ function warmColor() {
 
 function tealColor() {
   return [
-    0.02 + Math.random() * 0.06,
-    0.15 + Math.random() * 0.20,
+    0.05 + Math.random() * 0.08,
     0.25 + Math.random() * 0.30,
+    0.30 + Math.random() * 0.35,
   ]
 }
 
@@ -57,8 +57,8 @@ export function createNebulaBg(scene) {
   const webbB = buildCloud(6000, -10, 60, warmColor)
 
   // Hubble mode — cool teal-blue
-  const hubbleA = buildCloud(12000, -120, -10, tealColor)
-  const hubbleB = buildCloud(6000, -10, 60, tealColor)
+  const hubbleA = buildCloud(12000, -120, -10, tealColor, 0.35, 0.65)
+  const hubbleB = buildCloud(6000, -10, 60, tealColor, 0.35, 0.65)
 
   webbA.visible   = false
   webbB.visible   = false
