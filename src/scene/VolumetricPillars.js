@@ -45,6 +45,9 @@ float fbm(vec3 p) {
 }
 
 float pillarSDF(vec3 p) {
+  p.x += fbm(p * 0.1) * 2.0;
+  p.z += fbm(p * 0.1 + 10.0) * 2.0;
+
   float d = 1e9;
 
   // Pillar 1 — tallest left
@@ -77,6 +80,15 @@ float pillarSDF(vec3 p) {
   return d;
 }
 
+vec3 estimateNormal(vec3 p) {
+  float e = 0.5;
+  return normalize(vec3(
+    pillarSDF(p + vec3(e, 0.0, 0.0)) - pillarSDF(p - vec3(e, 0.0, 0.0)),
+    pillarSDF(p + vec3(0.0, e, 0.0)) - pillarSDF(p - vec3(0.0, e, 0.0)),
+    pillarSDF(p + vec3(0.0, 0.0, e)) - pillarSDF(p - vec3(0.0, 0.0, e))
+  ));
+}
+
 void main() {
   vec3 ro = uCamPos;
   vec3 rd = normalize(vWorldPos - uCamPos);
@@ -97,21 +109,39 @@ void main() {
     float sdf = pillarSDF(pos);
 
     if(sdf < 0.0) {
-      float density = clamp(-sdf * 0.35, 0.0, 1.0);
+      float baseDensity = clamp(-sdf * 0.4, 0.0, 1.0);
+
+      float detail = fbm(pos * 0.6);
+      float fine   = fbm(pos * 2.0) * 0.5;
+
+      float density = baseDensity * (0.6 + detail * 0.6 + fine * 0.3);
+
       float heightFade = smoothstep(-2.0, 2.0, pos.y);
       density *= heightFade;
 
-      float heightRatio = clamp(pos.y / 28.0, 0.0, 1.0);
-      vec3 sampleCol = mix(uPillarColor * 0.7, uGlowColor, heightRatio * 0.4);
+      float erosion = fbm(pos * 1.2);
+      density *= smoothstep(0.3, 0.8, erosion);
 
-      float rim = clamp(sdf / -3.0, 0.0, 1.0);
-      sampleCol = mix(sampleCol * 1.8, sampleCol, rim);
+      density = clamp(density, 0.0, 1.0);
+
+      vec3 normal = estimateNormal(pos);
+      vec3 lightDir = normalize(vec3(1.0, 0.5, 0.2));
+      float light = clamp(dot(normal, lightDir), 0.0, 1.0);
+
+      vec3 dark = vec3(0.2, 0.1, 0.05);
+      vec3 mid  = uPillarColor;
+      vec3 glow = uGlowColor;
+
+      vec3 sampleCol = mix(dark, mid, density);
+      sampleCol = mix(sampleCol, glow, pow(density, 2.0));
+
+      sampleCol *= mix(0.4, 1.5, light);
 
       float alpha = density * 0.12;
       col.rgb += sampleCol * alpha * (1.0 - col.a);
       col.a   += alpha * (1.0 - col.a);
 
-      t += 0.3;
+      t += mix(0.2, 0.6, 1.0 - density);
     } else {
       t += max(sdf * 0.6, 0.3);
     }
