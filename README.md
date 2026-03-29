@@ -1,229 +1,130 @@
-# Pillars of Creation: Spectral Explorer 3D
+# Pillars of Creation — 3D Spectral Explorer
 
-An interactive 3D web experience of the Eagle Nebula's (M16) iconic “Pillars of Creation” — the towering columns of interstellar gas and dust first photographed by Hubble in 1995 and re-imaged by Webb in 2022. The app lets you orbit, zoom, and toggle between **Hubble-style visible-light** and **Webb-style near-infrared** color palettes, experiencing how the same structure looks in radically different parts of the electromagnetic spectrum.
-
-The MVP uses approximated geometry and scientifically-inspired color palettes. No FITS astronomical data pipeline is involved — authenticity comes from careful shader design, not raw telescope data.
+An interactive real-time 3D rendering of the Eagle Nebula's Pillars of Creation, built with React, Three.js, and custom GLSL shaders. Fly through the gas columns in first-person and toggle between Hubble visible-light and Webb infrared color palettes.
 
 ---
 
 ## What It Does
 
-| Feature | Description |
-|---|---|
-| **3D Navigation** | Orbit, pan, zoom around three pillar columns using mouse / touch |
-| **Spectral Toggle** | Switch between Hubble visible-light and Webb NIR palettes in real time via GLSL uniforms |
-| **Pillar Hotspots** | Click a pillar to open an info panel with real science (EGGs, stellar nurseries, photoevaporation) |
-| **Star Field** | Procedural background star field matched to Eagle Nebula's star density |
-| **Responsive** | Renders at full viewport; canvas resizes cleanly without leaking GL resources |
+- **Free-fly camera** — click to lock pointer, WASD to fly, Space/Shift for vertical, Q/E/Z/C for diagonals, scroll to zoom, touch drag on mobile
+- **Volumetric ray marching** — pillars rendered as real volumes, not meshes. A fragment shader casts rays through a density field, evaluating gas presence at each step
+- **Spectral toggle** — switch between Hubble (brown-red pillars, teal nebula) and Webb infrared (orange-red pillars, warm background) in real time via a GLSL uniform
+- **Dual nebula background** — two pre-built particle clouds swap on toggle, each color-matched to its palette
+- **Procedural star field** — hero stars in a tight sphere + 6000 background stars on a large shell, all rendered as round-dot particles
 
 ---
 
 ## Stack
 
-| Layer | Tool | Version | Role |
-|---|---|---|---|
-| **UI framework** | React | 18.3 | Component tree, state for spectral mode and open panel |
-| **Build tool** | Vite | 8.x | Dev server with HMR, ESM-native bundling, sub-second rebuilds |
-| **3D engine** | Three.js | 0.183 | WebGL scene graph, camera, render loop, raycasting |
-| **Shader pipeline** | vite-plugin-glsl | 1.5 | Import `.vert`/`.frag` files as ES module strings; enables `#include` directives |
-| **Language** | JavaScript (ESM) | — | No TypeScript for MVP; types via JSDoc where needed |
-| **Linting** | ESLint 9 | flat config | React hooks rules + react-refresh rules |
-| **Hosting target** | Vercel | — | Zero-config static deploy from `dist/` |
+| | |
+|---|---|
+| React 18 | UI state, spectral toggle component |
+| Three.js 0.183 | WebGL renderer, scene graph, camera |
+| Vite 8 | Dev server, ESM bundling |
+| GLSL | Vertex + fragment shaders embedded as template literals |
 
-No backend. No database. No external API calls at runtime. Pure client-side.
+No backend. No external API. Runs entirely in the browser.
 
 ---
 
-## Folder Structure
+## Project Structure
 
 ```
-the_pillars_of_creation/
-├── index.html                  # Vite entry point — mounts <div id=”root”>
-├── vite.config.js              # Vite config with React + GLSL plugins
-├── eslint.config.js            # ESLint flat config (React hooks, react-refresh)
-├── package.json
-│
-├── public/                     # Static assets served as-is (favicon, textures)
-│
-└── src/
-    ├── main.jsx                # ReactDOM.createRoot → <App />
-    ├── App.jsx                 # Root component — mounts scene + UI layers
-    ├── App.css                 # App-level styles
-    ├── index.css               # Global reset / body styles
-    │
-    ├── components/             # Pure React UI — no Three.js knowledge inside
-    │   ├── SpectralToggle/     # Button to flip between Hubble ↔ Webb mode
-    │   └── HotspotPanel/       # Side panel: pillar science content on click
-    │
-    ├── scene/                  # Three.js world — all WebGL lives here
-    │   ├── SceneManager.js     # Creates renderer, scene, camera; owns rAF loop
-    │   ├── controls.js         # OrbitControls setup and config
-    │   ├── pillars.js          # Geometry + ShaderMaterial for the 3 pillars
-    │   ├── starField.js        # Procedural star BufferGeometry + Points
-    │   └── raycaster.js        # Click → pillar hit → fires React callback
-    │
-    ├── shaders/                # GLSL source (imported via vite-plugin-glsl)
-    │   ├── pillar/
-    │   │   ├── pillar.vert     # Pillar vertex shader
-    │   │   └── pillar.frag     # Pillar fragment — spectral palette uniform
-    │   ├── dust/
-    │   │   ├── dust.vert       # Dust/haze vertex shader
-    │   │   └── dust.frag       # Dust fragment — scattering approximation
-    │   └── stars/
-    │       ├── stars.vert      # Star point sprite vertex shader
-    │       └── stars.frag      # Star fragment — glow, color temperature
-    │
-    ├── hooks/                  # Custom React hooks
-    │   ├── useScene.js         # Mounts/unmounts SceneManager onto a canvas ref
-    │   └── useSpectralMode.js  # State + setter for current spectral palette
-    │
-    ├── constants/              # Static config — data only, no logic
-    │   ├── palettes.js         # Hubble and Webb color stops as Three.Color values
-    │   └── scene.js            # Camera FOV, near/far, pillar positions/scales
-    │
-    └── utils/                  # Pure functions, no side effects
-        ├── colorRamp.js        # Interpolate between palette color stops
-        └── mapRange.js         # Generic linear remap (value, inMin, inMax, outMin, outMax)
+src/
+├── App.jsx                      # Root — wires scene, controls, toggle, hint UI
+├── components/
+│   └── SpectralToggle.jsx       # Hubble ↔ Webb toggle button
+├── scene/
+│   ├── SceneManager.js          # Renderer, camera, resize handler
+│   ├── FlyControls.js           # First-person fly camera (pointer lock + touch)
+│   ├── VolumetricPillars.js     # Texture-masked ray march — all 3 pillars as one volume
+│   ├── Pillar1.js               # Pillar 1 (Elephant Trunk) — SDF ray march, domain warped
+│   ├── NebulaBg.js              # Dual particle nebula background (Hubble + Webb sets)
+│   ├── StarField.js             # Procedural star field
+│   ├── lights.js                # Ambient + key/fill/rim directional lights
+│   └── DustClouds.js            # Dust particles (available, not currently mounted)
+└── utils/
+    └── makeCircleTexture.js     # Canvas-generated circle texture for round PointsMaterial dots
 ```
 
-Empty directories are tracked with `.gitkeep` until real files land.
+---
+
+## How the Rendering Works
+
+### VolumetricPillars.js — texture-masked ray march
+
+A large inverted sphere (`BackSide`, r=90) wraps the scene. The fragment shader casts a ray from the camera through each fragment and samples a NASA pillar photograph (`pillars_mask.png`) as a 2D density mask — image luminance determines whether gas exists at that world-space position. FBM noise warps the UV coordinates before sampling to break up linear banding.
+
+Density at each sample point:
+```
+density = maskLuminance × FBM(pos) × yFade × xFade × zFade
+```
+
+Color is selected per-step based on height and density, with two branches driven by `uMode` (0.0 = Hubble, 1.0 = Webb).
+
+### Pillar1.js — SDF ray march with domain warping
+
+Pillar 1 (the Elephant Trunk, leftmost) is a fully procedural signed distance field volume:
+
+**Shape primitives**
+- `sdCapsule` — trunk body and three finger peaks
+- `sdSphere` — mushroom cap, left-side bulge, EGG nodules at fingertips
+- `smin(k)` — smooth union melts all shapes together. High k at cap/trunk junction for heavy blending, low k at EGG nodules to keep them sharp
+
+**Domain warping**
+Two-layer FBM warp applied to position before any SDF evaluation:
+- Layer 1 (scale 0.20, amplitude 3.5) — large structural deformation, creates ridges and valleys
+- Layer 2 (scale 0.60, amplitude 1.2) — fine surface detail, creates fibrous texture
+
+**Density**
+```
+innerDensity = exp(-max(sdf, 0) * 0.5)
+outerWisp    = exp(-max(sdf, 0) * 0.35) * fbm(pos * 0.13)
+density      = max(innerDensity, outerWisp) * zFade * yFade
+```
+
+**Fresnel rim glow**
+Surface normal estimated from SDF gradient via 6-sample finite difference. Rim intensity = `pow(1 - |dot(rayDir, normal)|, 2.0)` — teal in Hubble mode, orange in Webb.
+
+**SDF-guided step size**
+`t += max(abs(sdfVal) * 0.3, 0.22)` near the surface, `max(abs(sdfVal) * 0.5, 0.55)` in empty space — sphere-marching style, converges faster than fixed steps.
+
+### FlyControls.js
+
+Pointer Lock API for desktop mouse look. Camera orientation stored as `yaw` and `pitch` floats, applied each frame as `THREE.Euler(pitch, yaw, 0, 'YXZ')` — no gimbal lock. Movement translates in camera-local space so forward is always where you're looking.
+
+---
+
+## Controls
+
+| Input | Action |
+|---|---|
+| Click canvas | Lock pointer |
+| Mouse move | Look around |
+| W / S | Fly forward / back |
+| A / D | Strafe left / right |
+| Space | Move up |
+| Shift | Move down |
+| Q / E | Diagonal up-left / up-right |
+| Z / C | Diagonal down-left / down-right |
+| Scroll | Zoom forward / back |
+| Esc | Unlock pointer |
+| One-finger drag | Look (mobile) |
+| Two-finger pinch | Fly forward / back (mobile) |
 
 ---
 
 ## Setup
 
-### Prerequisites
-
-- Node.js ≥ 18 (LTS recommended)
-- npm ≥ 9
-
-### Install and run
-
 ```bash
 npm install
-npm run dev
-# → http://localhost:5173
-```
-
-### All scripts
-
-| Script | What it does |
-|---|---|
-| `npm run dev` | Vite dev server with HMR — shader and component changes reload instantly |
-| `npm run build` | Production bundle into `dist/` — tree-shaken, minified |
-| `npm run preview` | Serve the production `dist/` locally to verify the build before deploy |
-| `npm run lint` | ESLint across all `src/` files |
-
-### Deploy to Vercel
-
-```bash
-npm run build
-```
-
-Push to GitHub and connect the repo to Vercel. It detects Vite automatically — no `vercel.json` needed. Every push to `main` triggers a deploy.
-
----
-
-## How the Shader Pipeline Works
-
-GLSL files are not bundled by Vite by default. `vite-plugin-glsl` intercepts imports of `.vert` and `.frag` files and returns their source as a plain JS string, which is passed directly to `THREE.ShaderMaterial`:
-
-```js
-// src/scene/pillars.js
-import vertexShader   from '../shaders/pillar/pillar.vert'
-import fragmentShader from '../shaders/pillar/pillar.frag'
-
-const material = new THREE.ShaderMaterial({
-  vertexShader,
-  fragmentShader,
-  uniforms: {
-    uSpectralMode: { value: 0.0 },  // 0.0 = Hubble, 1.0 = Webb
-    uTime:         { value: 0.0 },
-  },
-})
-```
-
-The plugin also supports `#include “../../shaders/shared/noise.glsl”` — shared GLSL chunks can be composed into any shader without string concatenation.
-
-In the render loop, uniforms are updated every frame:
-
-```js
-// src/scene/SceneManager.js
-function tick(t) {
-  material.uniforms.uTime.value = t * 0.001
-  renderer.render(scene, camera)
-  requestAnimationFrame(tick)
-}
+npm run dev       # → http://localhost:5173
+npm run build     # production bundle → dist/
+npm run preview   # serve dist/ locally
 ```
 
 ---
 
-## Spectral Mode System
+## Textures
 
-The core visual interaction is a single float uniform `uSpectralMode` (0.0 → 1.0) pushed to every material. Fragment shaders `mix()` between two hard-coded color ramps:
-
-| Region | Hubble ACS (visible) | Webb NIRCam (infrared) |
-|---|---|---|
-| Dense gas / base | Deep red-brown | Gold / amber |
-| Mid pillars | Orange / tan | Teal / cyan |
-| Halo / tips | Blue-grey | Deep red |
-| Stars | White / blue-white | Yellow-white |
-
-A single `useSpectralMode` hook holds the value in React state and propagates it to the Three.js scene through a callback ref — no re-render cascade, no prop drilling to the canvas.
-
-```js
-// src/hooks/useSpectralMode.js
-export function useSpectralMode() {
-  const [mode, setMode] = useState(0)           // 0 = Hubble, 1 = Webb
-  const sceneRef = useRef(null)
-
-  const toggle = () => {
-    const next = mode === 0 ? 1 : 0
-    setMode(next)
-    sceneRef.current?.setSpectralMode(next)     // direct uniform push, no re-render
-  }
-
-  return { mode, toggle, sceneRef }
-}
-```
-
----
-
-## Tech Decisions Log
-
-**Vite over CRA / Next.js**
-Vite 8 starts in under 300 ms and rebuilds on save in under 50 ms. No SSR needed for a pure 3D canvas app — Next.js adds zero value and significant complexity.
-
-**Three.js without React Three Fiber (R3F)**
-R3F is excellent but adds an abstraction layer over Three.js that makes low-level shader uniform management and custom render loops harder to reason about. Direct Three.js keeps the GL layer explicit and fully debuggable via browser WebGL inspector tools.
-
-**`vite-plugin-glsl` as devDependency**
-The plugin transforms shader source at build time — the output is plain JS strings. Nothing in the browser bundle depends on the plugin at runtime.
-
-**GLSL in separate files over template literals**
-Separate `.vert` / `.frag` files get IDE syntax highlighting, WebGL compiler error messages that reference actual file line numbers, and can use `#include` for shared chunks. Template literals offer none of this.
-
-**Shader subfolders by domain**
-`pillar/`, `dust/`, `stars/` — each visual domain owns its shaders. When a pillar shader changes, the right file is immediately obvious. Avoids a flat `shaders/` directory that grows into an unorganised pile.
-
-**Blank `App.jsx` as foundation**
-The scene canvas and UI panels are added progressively. Starting from `return null` avoids accumulating Vite boilerplate that needs to be undone before real work can begin.
-
-**No TypeScript for MVP**
-Adding TS types for Three.js `Object3D` hierarchies and custom `ShaderMaterial` uniform interfaces is valuable but slows down exploratory phase iteration. JSDoc annotations cover the public API of each module. TS migration is a natural step once the scene architecture stabilises.
-
----
-
-## Open Tasks
-
-- [ ] Mount Three.js canvas from `src/scene/SceneManager.js` — resize observer, dispose on unmount
-- [ ] Implement OrbitControls-style navigation — orbit + zoom, damped inertia, touch support
-- [ ] Build the three pillar meshes with placeholder geometry (lathe curves from reference silhouettes)
-- [ ] Author `pillar.frag` with two-palette `mix()` driven by `uSpectralMode`
-- [ ] Add procedural star field (`THREE.Points` + `stars.frag` point-sprite glow)
-- [ ] Wire `SpectralToggle` component → `useSpectralMode` → uniform update
-- [ ] Implement raycaster click on pillars → open `HotspotPanel` with pillar data
-- [ ] Fill `constants/palettes.js` with calibrated Hubble / Webb color stops
-- [ ] Author `dust.frag` haze layer — additive blending, alpha falloff by height
-- [ ] Performance pass: draw call audit, GPU timing on M3 integrated GPU
-- [ ] Replace placeholder geometry with sculpted pillar meshes (Blender → glTF → Three.js)
+`public/textures/pillars_mask.png` — NASA Hubble photograph used as a 2D density mask for the volumetric ray march. Tracked via Git LFS. The shader reads its luminance channel to determine gas density in world space, mapping image X to world X and image Y to world Y (portrait orientation, pillars run bottom to top).
