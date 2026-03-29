@@ -38,140 +38,108 @@ float fbm(vec3 p) {
   return v;
 }
 
-// Smooth minimum — melts shapes together
 float smin(float a, float b, float k) {
-  float h = clamp(0.5 + 0.5*(b-a)/k, 0.0, 1.0);
-  return mix(b, a, h) - k*h*(1.0-h);
+  float h=clamp(0.5+0.5*(b-a)/k,0.0,1.0);
+  return mix(b,a,h)-k*h*(1.0-h);
 }
 
-// Capsule SDF
 float sdCapsule(vec3 p, vec3 a, vec3 b, float r) {
-  vec3 pa = p-a, ba = b-a;
-  float t = clamp(dot(pa,ba)/dot(ba,ba), 0.0, 1.0);
-  return length(pa - ba*t) - r;
+  vec3 pa=p-a, ba=b-a;
+  float t=clamp(dot(pa,ba)/dot(ba,ba),0.0,1.0);
+  return length(pa-ba*t)-r;
 }
 
-// Vertical cone SDF (Inigo Quilez)
-float sdCone(vec3 p, float r1, float r2, float h) {
-  vec2 q = vec2(length(p.xz), p.y);
-  vec2 k1 = vec2(r2,h);
-  vec2 k2 = vec2(r2-r1,2.0*h);
-  vec2 ca = vec2(q.x-min(q.x,(q.y<0.0)?r1:r2), abs(q.y)-h);
-  vec2 cb = q - k1 + k2*clamp(dot(k1-q,k2)/dot(k2,k2),0.0,1.0);
-  float s = (cb.x<0.0 && ca.y<0.0) ? -1.0 : 1.0;
-  return s*sqrt(min(dot(ca,ca),dot(cb,cb)));
-}
-
-// Sphere SDF
 float sdSphere(vec3 p, vec3 c, float r) {
-  return length(p-c) - r;
+  return length(p-c)-r;
+}
+
+vec3 domainWarp(vec3 p) {
+  float s1 = 0.20;
+  vec3 q = vec3(
+    fbm(p * s1),
+    fbm(p * s1 + vec3(5.2, 1.3, 2.8)),
+    fbm(p * s1 + vec3(1.7, 9.2, 3.4))
+  ) * 3.5;
+  float s2 = 0.60;
+  vec3 r = vec3(
+    fbm(p * s2 + q),
+    fbm(p * s2 + q + vec3(8.3, 2.8, 5.1)),
+    fbm(p * s2 + q + vec3(4.1, 7.6, 1.9))
+  ) * 1.2;
+  return p + q + r;
 }
 
 float pillar1SDF(vec3 pos) {
   vec3 lp = pos - vec3(-6.0, 0.0, 0.0);
-
-  // === DOMAIN DISTORTION ===
-  vec3 warpPos = lp * 0.18;
-  float wx = fbm(warpPos);
-  float wy = fbm(warpPos + vec3(1.7, 9.2, 3.4));
-  float wz = fbm(warpPos + vec3(8.3, 2.8, 5.1));
-  vec3 warp = vec3(wx, wy, wz) * 1.4;
-
-  vec3 fineWarp = vec3(
-    fbm(lp * 0.55 + 2.3),
-    fbm(lp * 0.55 + 4.7),
-    fbm(lp * 0.55 + 6.1)
-  ) * 0.4;
-
-  vec3 wp = lp + warp + fineWarp;
-
-  // Slight rightward lean
-  wp.x -= wp.y * 0.035;
-
-  // === SHAPE PRIMITIVES ===
+  lp.x -= lp.y * 0.03;
+  vec3 wp = domainWarp(lp);
 
   // Main trunk — wide base tapering upward
-  float trunk = sdCone(
-    vec3(wp.x, wp.y - 14.0, wp.z),
-    3.8,
-    2.0,
-    14.0
+  float trunk = sdCapsule(wp,
+    vec3(0.0, -1.0, 0.0),
+    vec3(-0.5, 21.0, 0.0),
+    5.2 - lp.y * 0.09
   );
 
-  // Upper body
-  float upper = sdCapsule(
-    wp,
-    vec3(0.0, 14.0, 0.0),
-    vec3(-0.5, 22.0, 0.0),
-    2.4
+  // Mushroom cap — overhangs LEFT
+  float cap = sdSphere(wp, vec3(-2.0, 22.5, 0.0), 5.0);
+
+  // Left side secondary bulge
+  float bulge = sdSphere(wp, vec3(-5.0, 10.5, 0.3), 3.2);
+
+  // Left finger — taller, leans further left
+  float leftFinger = sdCapsule(wp,
+    vec3(-1.5, 18.0, 0.2),
+    vec3(-3.5, 30.0, 0.1),
+    1.8
   );
 
-  // Overhanging cap — shifted LEFT, wider
-  float cap = sdSphere(wp, vec3(-1.8, 24.5, 0.0), 3.2);
-
-  // Secondary left bulge
-  float bulge = sdSphere(wp, vec3(-3.5, 11.0, 0.3), 2.0);
-
-  // Finger 1 — main peak
-  float f1 = sdCapsule(wp,
-    vec3(-1.2, 24.0, 0.3),
-    vec3(-1.5, 29.5, 0.2),
-    1.0
+  // Right finger — shorter, leans slightly right
+  float rightFinger = sdCapsule(wp,
+    vec3(1.0, 17.5, -0.2),
+    vec3(2.0, 26.5, -0.2),
+    1.5
   );
 
-  // Finger 2
-  float f2 = sdCapsule(wp,
-    vec3(0.8, 23.5, -0.2),
-    vec3(0.5, 27.5, -0.3),
-    0.85
-  );
+  // EGG nodules at fingertips
+  float eggMask = smoothstep(22.0, 27.0, lp.y);
+  vec3 eggP = wp + fbm(wp * 4.2 + 8.1) * 0.6 * eggMask;
+  float egg1 = sdSphere(eggP, vec3(-3.5, 30.5, 0.1), 0.9);
+  float egg2 = sdSphere(eggP, vec3( 1.8, 26.8,-0.2), 0.75);
+  float egg3 = sdSphere(eggP, vec3(-1.0, 32.0, 0.2), 0.65);
 
-  // Finger 3 — smaller left peak
-  float f3 = sdCapsule(wp,
-    vec3(-3.2, 22.5, 0.1),
-    vec3(-3.8, 26.0, 0.2),
-    0.75
-  );
-
-  // EGG nodules on fingertips
-  float egg1 = sdSphere(wp, vec3(-1.5, 30.2, 0.2), 0.7);
-  float egg2 = sdSphere(wp, vec3(0.4, 28.2, -0.3), 0.6);
-  float egg3 = sdSphere(wp, vec3(-3.9, 26.8, 0.2), 0.5);
-
-  // === SMOOTH UNION ===
-  float k = 2.2;
-
+  float k = 3.5;
   float d = trunk;
-  d = smin(d, upper, k);
-  d = smin(d, cap,   k * 1.4);
-  d = smin(d, bulge, k);
-  d = smin(d, f1,    k * 0.8);
-  d = smin(d, f2,    k * 0.8);
-  d = smin(d, f3,    k * 0.8);
-  d = smin(d, egg1,  k * 0.4);
-  d = smin(d, egg2,  k * 0.4);
-  d = smin(d, egg3,  k * 0.4);
-
+  d = smin(d, cap,         k * 1.5);
+  d = smin(d, bulge,       k * 1.2);
+  d = smin(d, leftFinger,  k * 0.8);
+  d = smin(d, rightFinger, k * 0.8);
+  d = smin(d, egg1,        k * 0.25);
+  d = smin(d, egg2,        k * 0.25);
+  d = smin(d, egg3,        k * 0.25);
   return d;
 }
 
 float pillar1Density(vec3 pos) {
   float sdf = pillar1SDF(pos);
+  float yFade = smoothstep(-4.0, 2.0, pos.y)
+              * smoothstep(38.0, 28.0, pos.y);
+  float zFade = exp(-pos.z * pos.z * 0.016);
+  if(sdf > 4.5) return 0.0;
+  float innerDensity = exp(-max(sdf, 0.0) * 0.5)
+                     * clamp(-sdf * 0.3 + 0.8, 0.0, 1.0);
+  float outerWisp = exp(-max(sdf, 0.0) * 0.35)
+                  * fbm(pos * 0.13 + 1.8) * 0.5;
+  return clamp(max(innerDensity, outerWisp) * zFade * yFade, 0.0, 1.0);
+}
 
-  float yFade = smoothstep(-3.0, 1.0, pos.y)
-              * smoothstep(34.0, 28.0, pos.y);
-  float zFade = exp(-pos.z * pos.z * 0.014);
-
-  if(sdf > 3.0) return 0.0;
-
-  float innerDensity = clamp(-sdf / 3.0, 0.0, 1.0);
-
-  float outerWisp = exp(-sdf * 0.6) * 0.4
-    * fbm(pos * 0.14 + 2.1);
-
-  float density = max(innerDensity, outerWisp);
-
-  return clamp(density * zFade * yFade, 0.0, 1.0);
+vec3 calcNormal(vec3 pos) {
+  vec2 e = vec2(0.3, 0.0);
+  return normalize(vec3(
+    pillar1SDF(pos+e.xyy) - pillar1SDF(pos-e.xyy),
+    pillar1SDF(pos+e.yxy) - pillar1SDF(pos-e.yxy),
+    pillar1SDF(pos+e.yyx) - pillar1SDF(pos-e.yyx)
+  ));
 }
 
 void main() {
@@ -179,62 +147,69 @@ void main() {
   vec3 rd = normalize(vWorldPos - uCamPos);
 
   vec4 col = vec4(0.0);
-  float t = 0.2;
+  float t = 0.1;
 
-  for(int i=0;i<96;i++){
-    if(col.a > 0.95 || t > 100.0) break;
+  for(int i=0; i<80; i++) {
+    if(col.a > 0.95 || t > 110.0) break;
     vec3 pos = ro + rd * t;
 
     float dx = abs(pos.x + 6.0);
-    if(dx > 14.0 || pos.y < -4.0 || pos.y > 34.0 || abs(pos.z) > 12.0){
-      t += 1.5; continue;
+    if(dx > 18.0 || pos.y < -5.0 || pos.y > 38.0 || abs(pos.z) > 14.0) {
+      t += 2.0; continue;
     }
 
     float sdfVal  = pillar1SDF(pos);
     float density = pillar1Density(pos);
 
-    if(density > 0.015){
-      float h        = clamp(pos.y / 28.0, 0.0, 1.0);
-      float coreness = clamp(-sdfVal / 2.0, 0.0, 1.0);
-      float tip      = pow(clamp((pos.y - 22.0) / 7.0, 0.0, 1.0), 1.5);
+    if(density > 0.01) {
+      float h        = clamp(pos.y / 30.0, 0.0, 1.0);
+      float coreness = clamp(-sdfVal / 3.0, 0.0, 1.0);
+      float tip      = pow(clamp((pos.y - 22.0) / 10.0, 0.0, 1.0), 1.5);
 
       vec3 sampleCol;
-      if(uMode < 0.5){
-        vec3 darkCore  = vec3(0.20, 0.06, 0.02);
-        vec3 warmBrown = vec3(0.52, 0.20, 0.06);
-        vec3 creamTip  = vec3(0.97, 0.92, 0.76);
-        vec3 tealEdge  = vec3(0.18, 0.50, 0.50);
+      if(uMode < 0.5) {
+        vec3 darkCore  = vec3(0.18, 0.05, 0.02);
+        vec3 warmBrown = vec3(0.50, 0.18, 0.06);
+        vec3 creamTip  = vec3(0.97, 0.93, 0.76);
         sampleCol = mix(darkCore, warmBrown, coreness * 0.85);
         sampleCol = mix(sampleCol, creamTip, tip * 0.92);
-        sampleCol += tealEdge * (1.0 - coreness) * 0.28;
-        sampleCol += creamTip * pow(tip, 3.0) * 2.2;
-        float starGlow = exp(-length(pos - vec3(-7.5, 30.0, 0.2)) * 1.2);
-        sampleCol += vec3(1.0, 0.95, 0.8) * starGlow * 4.0;
+        sampleCol += creamTip * pow(tip, 3.0) * 2.5;
+        float star = exp(-length(pos - vec3(-7.8, 33.5, 0.2)) * 1.4);
+        sampleCol += vec3(1.0, 0.95, 0.8) * star * 5.0;
       } else {
-        vec3 darkCore   = vec3(0.38, 0.08, 0.02);
-        vec3 warmOrange = vec3(0.78, 0.30, 0.06);
-        vec3 hotTip     = vec3(0.96, 0.78, 0.52);
-        vec3 pinkEdge   = vec3(0.62, 0.28, 0.42);
+        vec3 darkCore   = vec3(0.35, 0.07, 0.02);
+        vec3 warmOrange = vec3(0.76, 0.28, 0.06);
+        vec3 hotTip     = vec3(0.95, 0.76, 0.50);
         sampleCol = mix(darkCore, warmOrange, coreness * 0.92);
         sampleCol = mix(sampleCol, hotTip, tip * 0.88);
-        sampleCol += pinkEdge * (1.0 - coreness) * 0.28;
-        float jetDist = abs((pos.x + 6.5) * 0.7 - (pos.y - 24.0) * 0.3);
-        float jet = exp(-jetDist * jetDist * 0.8)
-                  * smoothstep(22.0, 27.0, pos.y) * 0.7;
-        sampleCol += vec3(0.9, 0.5, 0.2) * jet;
-        sampleCol += hotTip * pow(tip, 2.5) * 2.5;
+        sampleCol += hotTip * pow(tip, 2.5) * 2.8;
+        float jetDist = abs((pos.x + 6.5) * 0.7 - (pos.y - 25.0) * 0.35);
+        sampleCol += vec3(0.9, 0.5, 0.2)
+                   * exp(-jetDist * jetDist * 0.9)
+                   * smoothstep(22.0, 28.0, pos.y) * 0.8;
       }
 
-      float topLight = 0.3 + 0.85 * clamp(pos.y / 28.0, 0.0, 1.0);
-      sampleCol *= topLight;
+      // Fresnel rim
+      vec3 norm = calcNormal(pos);
+      float fresnel = pow(1.0 - abs(dot(normalize(rd), norm)), 2.0);
+      sampleCol += (uMode < 0.5
+        ? vec3(0.25, 0.65, 0.65)
+        : vec3(0.85, 0.45, 0.18)) * fresnel * (uMode < 0.5 ? 1.2 : 1.1);
 
-      float alpha = density * 0.10;
+      // EGG high-freq detail at tips
+      sampleCol *= 1.0 + fbm(pos * 4.5 + 7.2) * 0.4
+                       * smoothstep(24.0, 29.0, pos.y);
+
+      // Top lighting
+      sampleCol *= 0.3 + 0.9 * h;
+
+      float alpha = density * 0.11;
       col.rgb += sampleCol * alpha * (1.0 - col.a);
       col.a   += alpha * (1.0 - col.a);
 
-      t += max(abs(sdfVal) * 0.35, 0.25);
+      t += max(abs(sdfVal) * 0.3, 0.22);
     } else {
-      t += max(abs(sdfVal) * 0.5, 0.6);
+      t += max(abs(sdfVal) * 0.5, 0.55);
     }
   }
 
