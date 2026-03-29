@@ -14,8 +14,12 @@ export function createFlyControls(camera, domElement) {
     yaw: 0,
   }
 
-  state.yaw   = 0
-  state.pitch = -0.05
+  state.yaw   = Math.PI
+  state.pitch = -0.08
+
+  // Apply initial orientation immediately
+  const initEuler = new THREE.Euler(state.pitch, state.yaw, 0, 'YXZ')
+  camera.quaternion.setFromEuler(initEuler)
 
   const MOVE_SPEED = 0.28
   const LOOK_SPEED = 0.0026

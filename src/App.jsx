@@ -32,6 +32,11 @@ export default function App() {
     const { mesh: pillarMesh, mat: pillarMat } = createVolumetricPillars(sceneManager.scene)
     pillarMatRef.current = pillarMat
 
+    const cam = sceneManager.camera
+    console.log('pillar mesh position:', pillarMesh.position)
+    console.log('camera position:', cam.position)
+    console.log('camera quaternion:', cam.quaternion)
+
     let rafId
     const tick = () => {
       rafId = requestAnimationFrame(tick)
