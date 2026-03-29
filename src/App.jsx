@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { SceneManager } from './scene/SceneManager'
 import { createStarField } from './scene/StarField'
-import { createVolumetricPillars, tickVolumetricPillars } from './scene/VolumetricPillars'
+import { createVolumetricPillars } from './scene/VolumetricPillars'
 import { createNebulaBg } from './scene/NebulaBg'
 import { addLights } from './scene/lights'
 import { createControls } from './scene/controls'
@@ -18,12 +18,12 @@ export default function App() {
     addLights(sceneManager.scene)
 
     const { mesh: pillarMesh, mat: pillarMat } = createVolumetricPillars(sceneManager.scene)
+    pillarMat.uniforms.uTime.value = 1.0
 
     let rafId
-    const tick = (time) => {
+    const tick = () => {
       rafId = requestAnimationFrame(tick)
-      const elapsed = time * 0.001
-      tickVolumetricPillars(pillarMat, pillarMesh, sceneManager.camera, elapsed)
+      pillarMat.uniforms.uCamPos.value.copy(sceneManager.camera.position).sub(pillarMesh.position)
       controls.update()
       sceneManager.renderer.render(sceneManager.scene, sceneManager.camera)
     }
