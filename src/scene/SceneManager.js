@@ -8,15 +8,15 @@ export class SceneManager {
     this.renderer.setPixelRatio(window.devicePixelRatio)
     this.renderer.setSize(window.innerWidth, window.innerHeight)
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
-    this.renderer.toneMappingExposure = 1.6
+    this.renderer.toneMappingExposure = 1.8
 
     this.renderer.domElement.style.display = 'block'
     container.appendChild(this.renderer.domElement)
     this._container = container
 
     this.scene = new THREE.Scene()
-    this.scene.background = new THREE.Color(0x05080f)
-    this.scene.fog = new THREE.FogExp2(0x05080f, 0.004)
+    this.scene.background = new THREE.Color(0x0a0510)
+    this.scene.fog = new THREE.FogExp2(0x0a0510, 0.003)
 
     this.camera = new THREE.PerspectiveCamera(
       55,
@@ -24,8 +24,8 @@ export class SceneManager {
       0.1,
       1000
     )
-    this.camera.position.set(0, 14, 90)
-    this.camera.lookAt(0, 7, 0)
+    this.camera.position.set(0, 14, 88)
+    this.camera.lookAt(0, 10, 0)
 
     this._rafId = null
     this._onResize = this._onResize.bind(this)

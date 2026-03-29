@@ -72,14 +72,14 @@ function buildLathePillar(def, material) {
 }
 
 function buildBaseCloud(scene) {
-  const geo = new THREE.SphereGeometry(14, 24, 12)
+  const geo = new THREE.SphereGeometry(16, 20, 10)
   const pos = geo.attributes.position
 
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i)
     const z = pos.getZ(i)
     // Flatten to a disc then add surface noise
-    let y = pos.getY(i) * 0.25
+    let y = pos.getY(i) * 0.35
     y += Math.sin(x * 0.4) * 1.5 + Math.cos(z * 0.35) * 1.2
     pos.setY(i, y)
   }
@@ -87,25 +87,25 @@ function buildBaseCloud(scene) {
   geo.computeVertexNormals()
 
   const mat = new THREE.MeshStandardMaterial({
-    color: 0x1a1208,
-    emissive: 0x0d0906,
-    emissiveIntensity: 0.4,
+    color: 0x2a1505,
+    emissive: 0x150a02,
+    emissiveIntensity: 0.6,
     roughness: 1.0,
     transparent: true,
-    opacity: 0.85,
+    opacity: 0.95,
   })
 
   const mesh = new THREE.Mesh(geo, mat)
-  mesh.position.set(0, -1.5, 1)
+  mesh.position.set(0, -2, 1)
   scene.add(mesh)
 }
 
 export function createPillars(scene) {
   const material = new THREE.MeshStandardMaterial({
-    color: 0x2a1f0f,
-    emissive: 0x1a0f05,
-    emissiveIntensity: 0.3,
-    roughness: 0.95,
+    color: 0x3d2408,
+    emissive: 0x1a0c03,
+    emissiveIntensity: 0.5,
+    roughness: 0.98,
     metalness: 0.0,
   })
 
