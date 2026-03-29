@@ -15,8 +15,8 @@ export class SceneManager {
     this._container = container
 
     this.scene = new THREE.Scene()
-    this.scene.background = new THREE.Color(0x010208)
-    this.scene.fog = new THREE.FogExp2(0x010208, 0.005)
+    this.scene.background = new THREE.Color(0x05080f)
+    this.scene.fog = new THREE.FogExp2(0x05080f, 0.004)
 
     this.camera = new THREE.PerspectiveCamera(
       55,
@@ -24,8 +24,8 @@ export class SceneManager {
       0.1,
       1000
     )
-    this.camera.position.set(0, 4, 50)
-    this.camera.lookAt(0, 0, 0)
+    this.camera.position.set(0, 14, 90)
+    this.camera.lookAt(0, 7, 0)
 
     this._rafId = null
     this._onResize = this._onResize.bind(this)
