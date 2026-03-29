@@ -5,6 +5,7 @@ import { createVolumetricPillars, updateSpectralMode } from './scene/VolumetricP
 import { createNebulaBg, setNebulaMode } from './scene/NebulaBg'
 import { addLights } from './scene/lights'
 import { createFlyControls } from './scene/FlyControls'
+import { createPillar1, tickPillar1 } from './scene/Pillar1'
 import SpectralToggle from './components/SpectralToggle'
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
   const [showHint, setShowHint] = useState(true)
   const pillarMatRef = useRef(null)
   const nebulaBgRef = useRef(null)
+  const pillar1Ref = useRef(null)
 
   useEffect(() => {
     const t = setTimeout(() => setShowHint(false), 4000)
@@ -32,16 +34,15 @@ export default function App() {
     const { mesh: pillarMesh, mat: pillarMat } = createVolumetricPillars(sceneManager.scene)
     pillarMatRef.current = pillarMat
 
-    const cam = sceneManager.camera
-    console.log('pillar mesh position:', pillarMesh.position)
-    console.log('camera position:', cam.position)
-    console.log('camera quaternion:', cam.quaternion)
+    const p1 = createPillar1(sceneManager.scene)
+    pillar1Ref.current = p1
 
     let rafId
     const tick = () => {
       rafId = requestAnimationFrame(tick)
       flyControls.tick()
       pillarMat.uniforms.uCamPos.value.copy(sceneManager.camera.position).sub(pillarMesh.position)
+      tickPillar1(p1.mat, p1.mesh, sceneManager.camera)
       sceneManager.renderer.render(sceneManager.scene, sceneManager.camera)
     }
     rafId = requestAnimationFrame(tick)
@@ -58,6 +59,7 @@ export default function App() {
     setSpectralMode(next)
     if (pillarMatRef.current)  updateSpectralMode(pillarMatRef.current, next)
     if (nebulaBgRef.current)   setNebulaMode(nebulaBgRef.current, next)
+    if (pillar1Ref.current)    pillar1Ref.current.mat.uniforms.uMode.value = next === 'webb' ? 1.0 : 0.0
   }
 
   return (
