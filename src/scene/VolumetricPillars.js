@@ -52,23 +52,23 @@ float pillarSDF(vec3 p) {
 
   // Pillar 1 — tallest left
   float y1 = clamp(p.y, 0.0, 26.0);
-  float r1 = mix(4.5, 1.4, y1 / 26.0);
+  float r1 = mix(7.0, 2.0, y1 / 26.0);
   d = min(d, length(p.xz - vec2(-5.0, 0.5)) - r1
-        - fbm(p * 0.15 + uTime * 0.02) * 3.2
+        - fbm(p * 0.15 + uTime * 0.02) * 4.5
         + smoothstep(26.0, 22.0, p.y) * 1.5);
 
   // Pillar 2 — medium center
   float y2 = clamp(p.y, 0.0, 18.0);
-  float r2 = mix(3.6, 1.0, y2 / 18.0);
+  float r2 = mix(5.5, 1.6, y2 / 18.0);
   d = min(d, length(p.xz - vec2(1.5, 1.0)) - r2
-        - fbm(p * 0.18 + 1.7 + uTime * 0.02) * 2.8
+        - fbm(p * 0.18 + 1.7 + uTime * 0.02) * 4.0
         + smoothstep(18.0, 14.0, p.y) * 1.2);
 
   // Pillar 3 — short right
   float y3 = clamp(p.y, 0.0, 12.0);
-  float r3 = mix(2.8, 0.8, y3 / 12.0);
+  float r3 = mix(4.0, 1.2, y3 / 12.0);
   d = min(d, length(p.xz - vec2(8.0, -0.5)) - r3
-        - fbm(p * 0.22 + 3.4 + uTime * 0.02) * 2.4
+        - fbm(p * 0.22 + 3.4 + uTime * 0.02) * 3.2
         + smoothstep(12.0, 9.0, p.y) * 1.0);
 
   // Base connecting cloud
