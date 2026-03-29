@@ -1,4 +1,7 @@
 import * as THREE from 'three'
+import { makeCircleTexture } from '../utils/makeCircleTexture'
+
+// Not mounted in App while nebula silhouette is tuned; re-enable when needed.
 
 // Pillar centres and heights mirror PILLAR_DEFS in Pillars.js
 const CLUSTERS = [
@@ -44,10 +47,12 @@ export function createDustClouds(scene) {
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
 
   const material = new THREE.PointsMaterial({
-    size: 0.55,
-    color: 0x1e3a6e,
+    map: makeCircleTexture(),
+    alphaTest: 0.01,
+    size: 0.6,
+    color: 0x6b3010,
     transparent: true,
-    opacity: 0.28,
+    opacity: 0.4,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
     sizeAttenuation: true,

@@ -1,21 +1,19 @@
 import * as THREE from 'three'
 
 export function addLights(scene) {
-  // decay:0 — simple distance-cutoff falloff (Three.js r155+ default is
-  // decay:2 / inverse-square, which makes moderate intensities invisible)
-  const ambient = new THREE.AmbientLight(0x1a2a4a, 0.6)
+  const ambient = new THREE.AmbientLight(0x1a0f05, 1.2)
 
-  // Warm key — NGC 6611 star cluster, upper-left
-  const keyLight = new THREE.PointLight(0xcc9966, 25, 350, 0)
-  keyLight.position.set(-25, 70, 35)
+  const keyLight = new THREE.PointLight(0xff9944, 30, 400, 0)
+  keyLight.position.set(30, 80, 40)
 
-  // Cool rim from the right
-  const rimLight = new THREE.PointLight(0x2244aa, 10, 250, 0)
-  rimLight.position.set(50, 30, 10)
+  const fillLight = new THREE.PointLight(0xcc6622, 12, 300, 0)
+  fillLight.position.set(-30, 20, 20)
 
-  // Backlight — separates pillars from the dark background
-  const backLight = new THREE.PointLight(0x0a1535, 5, 200, 0)
-  backLight.position.set(0, 10, -60)
+  const rimLight = new THREE.PointLight(0x1133aa, 8, 250, 0)
+  rimLight.position.set(0, 30, -80)
 
-  scene.add(ambient, keyLight, rimLight, backLight)
+  const sun = new THREE.DirectionalLight(0xffaa55, 3)
+  sun.position.set(1, 2, 0.5)
+
+  scene.add(ambient, keyLight, fillLight, rimLight, sun)
 }

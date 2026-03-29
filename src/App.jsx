@@ -2,15 +2,13 @@ import { useEffect, useRef } from 'react'
 import { SceneManager } from './scene/SceneManager'
 import { createStarField } from './scene/StarField'
 import { createPillars } from './scene/Pillars'
-import { createDustClouds } from './scene/DustClouds'
 import { createNebulaBg } from './scene/NebulaBg'
 import { addLights } from './scene/lights'
 import { createControls } from './scene/controls'
 
 export default function App() {
-  const canvasRef   = useRef(null)
-  const pillarsRef  = useRef([])
-  const dustRef     = useRef(null)
+  const canvasRef = useRef(null)
+  const pillarsRef = useRef([])
   const nebulaBgRef = useRef(null)
 
   useEffect(() => {
@@ -22,7 +20,6 @@ export default function App() {
     addLights(sceneManager.scene)
 
     pillarsRef.current = createPillars(sceneManager.scene)
-    dustRef.current    = createDustClouds(sceneManager.scene)
 
     sceneManager.start(controls)
 
