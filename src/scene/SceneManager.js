@@ -5,10 +5,10 @@ export class SceneManager {
   // mount gets a fresh WebGL context (avoids StrictMode context-reuse issues)
   constructor(container) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true })
-    this.renderer.setPixelRatio(window.devicePixelRatio)
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0))
     this.renderer.setSize(window.innerWidth, window.innerHeight)
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
-    this.renderer.toneMappingExposure = 1.8
+    this.renderer.toneMappingExposure = 1.6
 
     this.renderer.domElement.style.display = 'block'
     container.appendChild(this.renderer.domElement)
@@ -24,8 +24,8 @@ export class SceneManager {
       0.1,
       1000
     )
-    this.camera.position.set(0, 8, 60)
-    this.camera.lookAt(0, 14, 0)
+    this.camera.position.set(0, 8, 58)
+    this.camera.lookAt(0, 12, 0)
 
     this._rafId = null
     this._onResize = this._onResize.bind(this)
