@@ -1,29 +1,36 @@
 import { useEffect, useRef } from 'react'
 import { SceneManager } from './scene/SceneManager'
 import { createStarField } from './scene/StarField'
-import { createPillars } from './scene/Pillars'
+import { createVolumetricPillars, tickVolumetricPillars } from './scene/VolumetricPillars'
 import { createNebulaBg } from './scene/NebulaBg'
 import { addLights } from './scene/lights'
 import { createControls } from './scene/controls'
 
 export default function App() {
   const canvasRef = useRef(null)
-  const pillarsRef = useRef([])
-  const nebulaBgRef = useRef(null)
 
   useEffect(() => {
     const sceneManager = new SceneManager(canvasRef.current)
     const controls = createControls(sceneManager.camera, sceneManager.renderer.domElement)
 
-    nebulaBgRef.current = createNebulaBg(sceneManager.scene)
+    createNebulaBg(sceneManager.scene)
     sceneManager.add(createStarField())
     addLights(sceneManager.scene)
 
-    pillarsRef.current = createPillars(sceneManager.scene)
+    const { mesh: pillarMesh, mat: pillarMat } = createVolumetricPillars(sceneManager.scene)
 
-    sceneManager.start(controls)
+    let rafId
+    const tick = (time) => {
+      rafId = requestAnimationFrame(tick)
+      const elapsed = time * 0.001
+      tickVolumetricPillars(pillarMat, pillarMesh, sceneManager.camera, elapsed)
+      controls.update()
+      sceneManager.renderer.render(sceneManager.scene, sceneManager.camera)
+    }
+    rafId = requestAnimationFrame(tick)
 
     return () => {
+      cancelAnimationFrame(rafId)
       controls.dispose()
       sceneManager.dispose()
     }

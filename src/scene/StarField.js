@@ -1,9 +1,8 @@
 import * as THREE from 'three'
 import { makeCircleTexture } from '../utils/makeCircleTexture'
 
-const STAR_COUNT = 8000
+const STAR_COUNT = 6000
 const HERO_COUNT = 200
-const SPHERE_RADIUS = 300
 const HERO_VOLUME_RADIUS = 140
 
 function randomInBall(radius) {
@@ -23,33 +22,29 @@ export function createStarField() {
   const group = new THREE.Group()
 
   const positions = new Float32Array(STAR_COUNT * 3)
-  const colors = new Float32Array(STAR_COUNT * 3)
 
   for (let i = 0; i < STAR_COUNT; i++) {
     const theta = Math.random() * Math.PI * 2
-    const phi = Math.acos(2 * Math.random() - 1)
+    const phi   = Math.acos(2 * Math.random() - 1)
+    const r     = 280 + Math.random() * 60
 
-    positions[i * 3] = SPHERE_RADIUS * Math.sin(phi) * Math.cos(theta)
-    positions[i * 3 + 1] = SPHERE_RADIUS * Math.sin(phi) * Math.sin(theta)
-    positions[i * 3 + 2] = SPHERE_RADIUS * Math.cos(phi)
-
-    colors[i * 3] = 0.85 + Math.random() * 0.15
-    colors[i * 3 + 1] = 0.88 + Math.random() * 0.12
-    colors[i * 3 + 2] = 0.9 + Math.random() * 0.1
+    positions[i * 3]     = r * Math.sin(phi) * Math.cos(theta)
+    positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta)
+    positions[i * 3 + 2] = r * Math.cos(phi)
   }
 
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
 
   const material = new THREE.PointsMaterial({
     map: makeCircleTexture(),
     alphaTest: 0.01,
-    vertexColors: true,
-    size: 0.6,
+    color: 0xcce0ff,
+    size: 0.55,
     sizeAttenuation: true,
     transparent: true,
-    opacity: 1.0,
+    opacity: 0.9,
+    depthWrite: false,
     fog: false,
   })
 
