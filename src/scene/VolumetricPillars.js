@@ -51,25 +51,25 @@ float pillarSDF(vec3 p) {
   float d = 1e9;
 
   // Pillar 1 — tallest left
-  float y1 = clamp(p.y, 0.0, 26.0);
-  float r1 = mix(7.0, 2.0, y1 / 26.0);
+  float y1 = clamp(p.y, 0.0, 22.0);
+  float r1 = mix(7.0, 2.0, y1 / 22.0);
   d = min(d, length(p.xz - vec2(-5.0, 0.5)) - r1
-        - fbm(p * 0.15 + uTime * 0.02) * 4.5
-        + smoothstep(26.0, 22.0, p.y) * 1.5);
+        - fbm(p * 0.15 + uTime * 0.02) * 3.5
+        + smoothstep(22.0, 18.0, p.y) * 1.5);
 
   // Pillar 2 — medium center
-  float y2 = clamp(p.y, 0.0, 18.0);
-  float r2 = mix(5.5, 1.6, y2 / 18.0);
+  float y2 = clamp(p.y, 0.0, 16.0);
+  float r2 = mix(5.5, 1.6, y2 / 16.0);
   d = min(d, length(p.xz - vec2(1.5, 1.0)) - r2
-        - fbm(p * 0.18 + 1.7 + uTime * 0.02) * 4.0
-        + smoothstep(18.0, 14.0, p.y) * 1.2);
+        - fbm(p * 0.18 + 1.7 + uTime * 0.02) * 3.2
+        + smoothstep(16.0, 12.0, p.y) * 1.2);
 
   // Pillar 3 — short right
-  float y3 = clamp(p.y, 0.0, 12.0);
-  float r3 = mix(4.0, 1.2, y3 / 12.0);
+  float y3 = clamp(p.y, 0.0, 10.0);
+  float r3 = mix(4.0, 1.2, y3 / 10.0);
   d = min(d, length(p.xz - vec2(8.0, -0.5)) - r3
-        - fbm(p * 0.22 + 3.4 + uTime * 0.02) * 3.2
-        + smoothstep(12.0, 9.0, p.y) * 1.0);
+        - fbm(p * 0.22 + 3.4 + uTime * 0.02) * 2.6
+        + smoothstep(10.0, 7.0, p.y) * 1.0);
 
   // Base connecting cloud
   float baseR = length(p.xz - vec2(1.5, 0.3)) / 8.0;
@@ -170,7 +170,7 @@ export function createVolumetricPillars(scene) {
   })
 
   const mesh = new THREE.Mesh(geo, mat)
-  mesh.position.set(1, 10, 0)
+  mesh.position.set(0, 12, 0)
   scene.add(mesh)
 
   return { mesh, mat }
