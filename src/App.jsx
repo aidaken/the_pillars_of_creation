@@ -1,24 +1,30 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { SceneManager } from './scene/SceneManager'
 import { createStarField } from './scene/StarField'
-import { createVolumetricPillars } from './scene/VolumetricPillars'
-import { createNebulaBg } from './scene/NebulaBg'
+import { createVolumetricPillars, updateSpectralMode } from './scene/VolumetricPillars'
+import { createNebulaBg, setNebulaMode } from './scene/NebulaBg'
 import { addLights } from './scene/lights'
 import { createControls } from './scene/controls'
+import SpectralToggle from './components/SpectralToggle'
 
 export default function App() {
   const canvasRef = useRef(null)
+  const [spectralMode, setSpectralMode] = useState('hubble')
+  const pillarMatRef = useRef(null)
+  const nebulaBgRef = useRef(null)
 
   useEffect(() => {
     const sceneManager = new SceneManager(canvasRef.current)
     const controls = createControls(sceneManager.camera, sceneManager.renderer.domElement)
 
-    createNebulaBg(sceneManager.scene)
+    const bgRefs = createNebulaBg(sceneManager.scene)
+    nebulaBgRef.current = bgRefs
+
     sceneManager.add(createStarField())
     addLights(sceneManager.scene)
 
     const { mesh: pillarMesh, mat: pillarMat } = createVolumetricPillars(sceneManager.scene)
-    pillarMat.uniforms.uTime.value = 1.0
+    pillarMatRef.current = pillarMat
 
     let rafId
     const tick = () => {
@@ -36,10 +42,17 @@ export default function App() {
     }
   }, [])
 
+  function handleToggle() {
+    const next = spectralMode === 'hubble' ? 'webb' : 'hubble'
+    setSpectralMode(next)
+    if (pillarMatRef.current)  updateSpectralMode(pillarMatRef.current, next)
+    if (nebulaBgRef.current)   setNebulaMode(nebulaBgRef.current, next)
+  }
+
   return (
-    <div
-      ref={canvasRef}
-      style={{ width: '100vw', height: '100vh' }}
-    />
+    <>
+      <div ref={canvasRef} style={{ width: '100vw', height: '100vh' }} />
+      <SpectralToggle mode={spectralMode} onToggle={handleToggle} />
+    </>
   )
 }
