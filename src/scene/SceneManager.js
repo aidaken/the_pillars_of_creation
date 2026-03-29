@@ -24,8 +24,7 @@ export class SceneManager {
       0.1,
       1000
     )
-    this.camera.position.set(0, 8, 58)
-    this.camera.lookAt(0, 12, 0)
+    this.camera.position.set(0, 10, 52)
 
     this._rafId = null
     this._onResize = this._onResize.bind(this)

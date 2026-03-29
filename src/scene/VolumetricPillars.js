@@ -48,30 +48,33 @@ float fbm(vec3 p) {
 }
 
 float sampleMask(vec3 pos) {
-  float u = clamp((pos.x + 13.0) / 26.0, 0.0, 1.0);
-  float v = clamp(1.0 - ((pos.y - 1.0) / 28.0), 0.02, 0.98);
+  // World space ranges:
+  // X: -14 to 14  (3 pillars side by side)
+  // Y:  -2 to 30  (base to tips)
+  // Z: -12 to 12  (depth)
 
-  // Focus on center of image where pillars are
-  u = 0.18 + u * 0.64;
-  v = 0.04 + v * 0.90;
+  // U = horizontal = X axis
+  float u = clamp((pos.x + 14.0) / 28.0, 0.0, 1.0);
 
-  // FBM warp — organic displacement, NO linear bands
-  float wx = fbm(vec3(pos.x * 0.07, pos.y * 0.05, pos.z * 0.06));
-  float wy = fbm(vec3(pos.x * 0.06, pos.y * 0.07, pos.z * 0.05) + 4.1);
-  vec2 warp = (vec2(wx, wy) - 0.5) * 0.05;
+  // V = vertical = Y axis (V=0 is TOP of image, V=1 is BOTTOM)
+  float v = clamp(1.0 - ((pos.y + 2.0) / 32.0), 0.0, 1.0);
 
-  // Z falloff using noise — breaks flat plane completely
-  float zNoise = fbm(vec3(pos.x * 0.04, pos.y * 0.03, pos.z * 0.09) + 2.3);
-  float zFalloff = smoothstep(11.0, 0.0, abs(pos.z - (zNoise - 0.5) * 5.0));
+  // Crop to pillar region in image
+  u = 0.10 + u * 0.80;
+  v = 0.02 + v * 0.96;
 
-  vec2 finalUV = clamp(vec2(u, v) + warp, 0.01, 0.99);
-  float lum = dot(
-    texture2D(uPillarMask, finalUV).rgb,
-    vec3(0.299, 0.587, 0.114)
-  );
+  // Tiny FBM warp — just enough to break hard edges
+  float wx = (fbm(vec3(pos.x * 0.05, pos.y * 0.04, pos.z * 0.03)) - 0.5) * 0.025;
+  float wy = (fbm(vec3(pos.y * 0.05, pos.z * 0.04, pos.x * 0.03) + 2.1) - 0.5) * 0.025;
 
-  // Threshold — kill dark background pixels
-  float threshold = smoothstep(0.05, 0.20, lum);
+  vec2 uv = clamp(vec2(u + wx, v + wy), 0.01, 0.99);
+  float lum = dot(texture2D(uPillarMask, uv).rgb, vec3(0.299, 0.587, 0.114));
+
+  // Z depth falloff — gaussian-style
+  float zFalloff = exp(-pos.z * pos.z * 0.008);
+
+  // Threshold — remove dark background
+  float threshold = smoothstep(0.05, 0.18, lum);
 
   return lum * zFalloff * threshold;
 }
@@ -108,28 +111,39 @@ void main() {
     if(col.a > 0.95 || t > maxT) break;
     vec3 pos = ro + rd * t;
 
+    // Skip samples outside pillar volume bounds
+    if(pos.y < -4.0 || pos.y > 34.0 || abs(pos.x) > 18.0 || abs(pos.z) > 14.0) {
+      t += 0.75;
+      continue;
+    }
+
     float density = hybridDensity(pos);
 
     if(density > 0.015) {
-      float heightRatio = clamp(pos.y / 28.0, 0.0, 1.0);
-      float coreness = clamp(density * 1.8, 0.0, 1.0);
 
       vec3 sampleCol;
 
       if(uMode < 0.5) {
         // HUBBLE VISIBLE LIGHT
-        vec3 denseCore = vec3(0.35, 0.12, 0.05);
-        vec3 midTone   = vec3(0.55, 0.25, 0.10);
-        vec3 tipGlow   = vec3(0.95, 0.88, 0.72);
-        vec3 edgeWisp  = vec3(0.70, 0.55, 0.40);
+        vec3 denseCore = vec3(0.28, 0.08, 0.03);
+        vec3 midTone   = vec3(0.52, 0.20, 0.07);
+        vec3 tipGlow   = vec3(0.98, 0.92, 0.78);
+        vec3 tealWisp  = vec3(0.25, 0.55, 0.55);
 
-        sampleCol = mix(denseCore, midTone, coreness);
-        sampleCol = mix(sampleCol, tipGlow, pow(heightRatio, 2.5) * 0.85);
-        sampleCol = mix(sampleCol, edgeWisp, (1.0 - coreness) * 0.4);
-        sampleCol += tipGlow * pow(heightRatio, 5.0) * 1.2;
+        float core = clamp(density * 2.0, 0.0, 1.0);
+        float tip  = pow(clamp(pos.y / 26.0, 0.0, 1.0), 2.2);
+        float edge = 1.0 - core;
+
+        sampleCol  = mix(denseCore, midTone, core * 0.7);
+        sampleCol  = mix(sampleCol, tipGlow, tip * 0.9);
+        sampleCol += tealWisp * edge * 0.25;
+        sampleCol += tipGlow  * pow(tip, 3.0) * 1.5;
 
       } else {
         // WEBB INFRARED
+        float heightRatio = clamp(pos.y / 28.0, 0.0, 1.0);
+        float coreness    = clamp(density * 1.8, 0.0, 1.0);
+
         vec3 denseCore = vec3(0.45, 0.10, 0.02);
         vec3 midTone   = vec3(0.75, 0.30, 0.08);
         vec3 tipGlow   = vec3(0.95, 0.75, 0.55);
@@ -168,7 +182,7 @@ export function createVolumetricPillars(scene) {
   pillarMask.minFilter = THREE.LinearFilter
   pillarMask.magFilter = THREE.LinearFilter
 
-  const geo = new THREE.SphereGeometry(80, 16, 16)
+  const geo = new THREE.SphereGeometry(90, 32, 32)
 
   const mat = new THREE.ShaderMaterial({
     vertexShader: vertSrc,
@@ -188,7 +202,7 @@ export function createVolumetricPillars(scene) {
   })
 
   const mesh = new THREE.Mesh(geo, mat)
-  mesh.position.set(0, 8, 0)
+  mesh.position.set(0, 12, 0)
   scene.add(mesh)
 
   return { mesh, mat }
