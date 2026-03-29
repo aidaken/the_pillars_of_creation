@@ -1,64 +1,103 @@
 import * as THREE from 'three'
 
+// LatheGeometry profile: array of [radius, height] pairs bottom → top.
+// Each pillar has a unique irregular silhouette rather than a smooth cone.
 const PILLAR_DEFS = [
   {
     name: 'finger',
+    profile: [
+      [4.2, 0], [3.8, 2], [4.5, 4],  [3.2, 7],  [3.8, 10], [2.9, 13],
+      [3.4, 16],[2.4, 19],[2.8, 22],  [1.8, 25], [1.2, 27], [0.8, 28],
+    ],
+    segments: 20,
     position: [-9, 0, 2],
-    radiusTop: 1.8,
-    radiusBottom: 4.0,
-    height: 28,
-    radialSegments: 16,
-    heightSegments: 12,
+    rotation: { z: -0.08, x: 0.04 },
   },
   {
     name: 'thumb',
-    position: [1, 0, 4],
-    radiusTop: 1.4,
-    radiusBottom: 3.2,
-    height: 20,
-    radialSegments: 16,
-    heightSegments: 12,
+    profile: [
+      [3.4, 0], [3.0, 2], [3.6, 4], [2.7, 6], [3.1, 9], [2.4, 12],
+      [2.8, 14],[1.9, 17],[1.5, 19],[0.9, 20],
+    ],
+    segments: 18,
+    position: [2, 0, 4],
+    rotation: { z: 0.06, x: -0.03 },
   },
   {
     name: 'pinky',
+    profile: [
+      [2.6, 0], [2.3, 2], [2.8, 3], [2.0, 6], [2.4, 8],
+      [1.7, 10],[1.3, 12],[0.7, 13],[0.5, 14],
+    ],
+    segments: 16,
     position: [9, 0, -1],
-    radiusTop: 1.0,
-    radiusBottom: 2.4,
-    height: 14,
-    radialSegments: 16,
-    heightSegments: 12,
+    rotation: { z: 0.03 },
   },
 ]
 
-function buildPillarGeometry(def) {
-  const geo = new THREE.CylinderGeometry(
-    def.radiusTop,
-    def.radiusBottom,
-    def.height,
-    def.radialSegments,
-    def.heightSegments
-  )
-
+function applyBumpNoise(geo) {
   const pos = geo.attributes.position
-  const halfH = def.height / 2
-
   for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i)
     const y = pos.getY(i)
-    const t = (y + halfH) / def.height
-
-    const xNoise = Math.sin(y * 0.3) * 0.5 + Math.sin(y * 0.8) * 0.2
-    const zNoise = Math.cos(y * 0.28) * 0.5 + Math.cos(y * 0.75) * 0.2
-
-    // Taper noise toward the tip so the top stays controlled
-    const envelope = 1 - t * 0.55
-
-    pos.setX(i, pos.getX(i) + xNoise * envelope)
-    pos.setZ(i, pos.getZ(i) + zNoise * envelope)
+    const z = pos.getZ(i)
+    const r = Math.sqrt(x * x + z * z)
+    if (r > 0.1) {
+      const bump1  = Math.sin(y * 0.6 + x * 0.8) * 0.45
+      const bump2  = Math.cos(y * 1.2 + z * 0.9) * 0.28
+      const detail = Math.sin(y * 2.5 + x * 2.1) * 0.12
+                   + Math.cos(y * 3.1 + z * 1.8) * 0.08
+      const scale = 1 + (bump1 + bump2 + detail) / r
+      pos.setXYZ(i, x * scale, y, z * scale)
+    }
   }
-
   pos.needsUpdate = true
   geo.computeVertexNormals()
-  return geo
+}
+
+function buildLathePillar(def, material) {
+  const points = def.profile.map(([r, h]) => new THREE.Vector2(r, h))
+  const geo = new THREE.LatheGeometry(points, def.segments)
+
+  applyBumpNoise(geo)
+
+  const mesh = new THREE.Mesh(geo, material.clone())
+  mesh.position.set(...def.position)
+  if (def.rotation) {
+    if (def.rotation.x) mesh.rotation.x = def.rotation.x
+    if (def.rotation.y) mesh.rotation.y = def.rotation.y
+    if (def.rotation.z) mesh.rotation.z = def.rotation.z
+  }
+  return mesh
+}
+
+function buildBaseCloud(scene) {
+  const geo = new THREE.SphereGeometry(14, 24, 12)
+  const pos = geo.attributes.position
+
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i)
+    const z = pos.getZ(i)
+    // Flatten to a disc then add surface noise
+    let y = pos.getY(i) * 0.25
+    y += Math.sin(x * 0.4) * 1.5 + Math.cos(z * 0.35) * 1.2
+    pos.setY(i, y)
+  }
+  pos.needsUpdate = true
+  geo.computeVertexNormals()
+
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x1a1208,
+    emissive: 0x0d0906,
+    emissiveIntensity: 0.4,
+    roughness: 1.0,
+    transparent: true,
+    opacity: 0.85,
+  })
+
+  const mesh = new THREE.Mesh(geo, mat)
+  mesh.position.set(0, -1.5, 1)
+  scene.add(mesh)
 }
 
 export function createPillars(scene) {
@@ -70,13 +109,10 @@ export function createPillars(scene) {
     metalness: 0.0,
   })
 
+  buildBaseCloud(scene)
+
   return PILLAR_DEFS.map((def) => {
-    const geo = buildPillarGeometry(def)
-    const mesh = new THREE.Mesh(geo, material.clone())
-
-    // Base sits at y=0 — CylinderGeometry is centred, so shift up by half height
-    mesh.position.set(def.position[0], def.height / 2, def.position[2])
-
+    const mesh = buildLathePillar(def, material)
     scene.add(mesh)
     return mesh
   })

@@ -8,7 +8,7 @@ export class SceneManager {
     this.renderer.setPixelRatio(window.devicePixelRatio)
     this.renderer.setSize(window.innerWidth, window.innerHeight)
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
-    this.renderer.toneMappingExposure = 1.2
+    this.renderer.toneMappingExposure = 1.6
 
     this.renderer.domElement.style.display = 'block'
     container.appendChild(this.renderer.domElement)
