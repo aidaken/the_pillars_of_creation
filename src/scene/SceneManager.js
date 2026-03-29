@@ -24,7 +24,7 @@ export class SceneManager {
       0.1,
       1000
     )
-    this.camera.position.set(0, 14, 88)
+    this.camera.position.set(0, 10, 55)
     this.camera.lookAt(0, 10, 0)
 
     this._rafId = null

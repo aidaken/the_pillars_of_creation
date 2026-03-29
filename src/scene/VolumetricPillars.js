@@ -72,7 +72,7 @@ float pillarSDF(vec3 p) {
         + smoothstep(12.0, 9.0, p.y) * 1.0);
 
   // Base connecting cloud
-  float baseR = length(p.xz - vec2(1.5, 0.3)) / 12.0;
+  float baseR = length(p.xz - vec2(1.5, 0.3)) / 8.0;
   float base = baseR - 1.0 + p.y * 0.15
              - fbm(p * 0.12) * 1.8;
   d = min(d, mix(base, d, smoothstep(0.0, 8.0, p.y)));
@@ -101,7 +101,7 @@ void main() {
     if(col.a > 0.95 || t > maxT) break;
     vec3 pos = ro + rd * t;
 
-    if(abs(pos.x) > 20.0 || pos.y < -5.0 || pos.y > 35.0 || abs(pos.z) > 16.0) {
+    if(abs(pos.x) > 30.0 || pos.y < -8.0 || pos.y > 45.0 || abs(pos.z) > 25.0) {
       t += 1.5;
       continue;
     }
@@ -137,11 +137,11 @@ void main() {
 
       sampleCol *= mix(0.4, 1.5, light);
 
-      float alpha = density * 0.12;
+      float alpha = density * 0.22;
       col.rgb += sampleCol * alpha * (1.0 - col.a);
       col.a   += alpha * (1.0 - col.a);
 
-      t += mix(0.2, 0.6, 1.0 - density);
+      t += mix(0.25, 0.6, 1.0 - density);
     } else {
       t += max(sdf * 0.6, 0.3);
     }
@@ -153,7 +153,7 @@ void main() {
 `
 
 export function createVolumetricPillars(scene) {
-  const geo = new THREE.SphereGeometry(80, 32, 32)
+  const geo = new THREE.SphereGeometry(120, 32, 32)
 
   const mat = new THREE.ShaderMaterial({
     vertexShader: vertSrc,
@@ -161,8 +161,8 @@ export function createVolumetricPillars(scene) {
     uniforms: {
       uCamPos:      { value: new THREE.Vector3() },
       uTime:        { value: 0 },
-      uPillarColor: { value: new THREE.Color(0.65, 0.35, 0.08) },
-      uGlowColor:   { value: new THREE.Color(0.90, 0.60, 0.20) },
+      uPillarColor: { value: new THREE.Color(0.80, 0.45, 0.10) },
+      uGlowColor:   { value: new THREE.Color(1.00, 0.75, 0.25) },
     },
     transparent: true,
     depthWrite: false,
