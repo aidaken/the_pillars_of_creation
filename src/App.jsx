@@ -6,6 +6,7 @@ import { createNebulaBg, setNebulaMode } from './scene/NebulaBg'
 import { addLights } from './scene/lights'
 import { createFlyControls } from './scene/FlyControls'
 import { createPillar1, tickPillar1 } from './scene/Pillar1'
+import { createPillar2, tickPillar2 } from './scene/Pillar2'
 import { createJwstObserver, tickJwstObserver } from './scene/JwstObserver'
 import SpectralToggle from './components/SpectralToggle'
 
@@ -32,6 +33,7 @@ export default function App() {
   const pillarMatRef = useRef(null)
   const nebulaBgRef = useRef(null)
   const pillar1Ref = useRef(null)
+  const pillar2Ref = useRef(null)
 
   useEffect(() => {
     const t = setTimeout(() => setShowHint(false), 4000)
@@ -41,6 +43,10 @@ export default function App() {
   useEffect(() => {
     const sceneManager = new SceneManager(canvasRef.current)
     const flyControls = createFlyControls(sceneManager.camera, canvasRef.current)
+
+    // Camera initial position
+    sceneManager.camera.position.set(0, 10, 68)
+    sceneManager.camera.lookAt(0, 12, 0)
 
     const bgRefs = createNebulaBg(sceneManager.scene)
     nebulaBgRef.current = bgRefs
@@ -52,7 +58,12 @@ export default function App() {
     pillarMatRef.current = pillarMat
 
     const p1 = createPillar1(sceneManager.scene)
+    p1.mesh.position.set(-12, 10, 0)
     pillar1Ref.current = p1
+
+    const p2 = createPillar2(sceneManager.scene)
+    p2.mesh.position.set(2, 7, 4)
+    pillar2Ref.current = p2
 
     const jwst = createJwstObserver(sceneManager.scene)
 
@@ -62,6 +73,7 @@ export default function App() {
       flyControls.tick()
       pillarMat.uniforms.uCamPos.value.copy(sceneManager.camera.position).sub(pillarMesh.position)
       tickPillar1(p1.mat, p1.mesh, sceneManager.camera)
+      tickPillar2(p2.mat, p2.mesh, sceneManager.camera)
       tickJwstObserver(jwst.mat, sceneManager.camera)
       sceneManager.renderer.render(sceneManager.scene, sceneManager.camera)
     }
@@ -80,6 +92,7 @@ export default function App() {
     if (pillarMatRef.current)  updateSpectralMode(pillarMatRef.current, next)
     if (nebulaBgRef.current)   setNebulaMode(nebulaBgRef.current, next)
     if (pillar1Ref.current)    pillar1Ref.current.mat.uniforms.uMode.value = next === 'webb' ? 1.0 : 0.0
+    if (pillar2Ref.current)    pillar2Ref.current.mat.uniforms.uMode.value = next === 'webb' ? 1.0 : 0.0
   }
 
   return (
