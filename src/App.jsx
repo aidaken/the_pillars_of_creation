@@ -47,8 +47,8 @@ export default function App() {
     const flyControls = createFlyControls(sceneManager.camera, canvasRef.current)
 
     // Camera initial position
-    sceneManager.camera.position.set(0, 10, 85)
-    sceneManager.camera.lookAt(0, 10, 0)
+    sceneManager.camera.position.set(0, 11, 92)
+    sceneManager.camera.lookAt(0, 8.5, 1)
 
     const bgRefs = createNebulaBg(sceneManager.scene)
     nebulaBgRef.current = bgRefs
@@ -60,15 +60,15 @@ export default function App() {
     pillarMatRef.current = pillarMat
 
     const p1 = createPillar1(sceneManager.scene)
-    p1.mesh.position.set(-16, 10, 0)
+    p1.mesh.position.set(-30, 10, -4)
     pillar1Ref.current = p1
 
     const p2 = createPillar2(sceneManager.scene)
-    p2.mesh.position.set(0, 8, 3)
+    p2.mesh.position.set(0, 9, 0)
     pillar2Ref.current = p2
 
     const p3 = createPillar3(sceneManager.scene)
-    p3.mesh.position.set(14, 5, 6)
+    p3.mesh.position.set(28, 6, 6)
     pillar3Ref.current = p3
 
     const jwst = createJwstObserver(sceneManager.scene)

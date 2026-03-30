@@ -134,8 +134,8 @@ float pillar1Density(vec3 pos) {
   if(sdf > 4.5) return 0.0;
   float innerDensity = exp(-max(sdf, 0.0) * 0.5)
                      * clamp(-sdf * 0.3 + 0.8, 0.0, 1.0);
-  float outerWisp = exp(-max(sdf, 0.0) * 0.35)
-                  * fbm(pos * 0.13 + 1.8) * 0.5;
+  float outerWisp = exp(-max(sdf, 0.0) * 0.31)
+                  * fbm(pos * 0.11 + 1.8) * 0.58;
   return clamp(max(innerDensity, outerWisp) * zFade * yFade, 0.0, 1.0);
 }
 
@@ -168,48 +168,64 @@ void main() {
     float density = pillar1Density(pos);
 
     if(density > 0.01) {
-      float h        = clamp(pos.y / 30.0, 0.0, 1.0);
       float coreness = clamp(-sdfVal / 3.0, 0.0, 1.0);
       float tip      = pow(clamp((pos.y - 22.0) / 10.0, 0.0, 1.0), 1.5);
 
       vec3 sampleCol;
+      vec3 norm = calcNormal(pos);
+
       if(uMode < 0.5) {
-        vec3 darkCore  = vec3(0.18, 0.05, 0.02);
-        vec3 warmBrown = vec3(0.50, 0.18, 0.06);
-        vec3 creamTip  = vec3(0.97, 0.93, 0.76);
-        sampleCol = mix(darkCore, warmBrown, coreness * 0.85);
-        sampleCol = mix(sampleCol, creamTip, tip * 0.92);
-        sampleCol += creamTip * pow(tip, 3.0) * 2.5;
+        // Hubble visible: near-black core, umber mid, golden lit faces, cream ionized tips
+        vec3 coreBlack  = vec3(0.028, 0.009, 0.002);
+        vec3 darkBrown  = vec3(0.18, 0.065, 0.016);
+        vec3 warmSienna = vec3(0.46, 0.19, 0.052);
+        vec3 warmTan    = vec3(0.72, 0.38, 0.11);
+        vec3 cream      = vec3(0.98, 0.94, 0.80);
+
+        sampleCol = mix(coreBlack, darkBrown, coreness * 0.5);
+        sampleCol = mix(sampleCol, warmSienna, coreness * 0.85);
+
+        float litFace = clamp(0.5 - pos.x * 0.06, 0.0, 1.0);
+        sampleCol = mix(sampleCol, warmTan,
+          litFace * coreness * 0.5);
+
+        sampleCol = mix(sampleCol, cream, tip * 0.92);
+        sampleCol += cream * pow(tip, 3.5) * 4.2;
+        sampleCol += vec3(1.0, 0.99, 0.96) * pow(tip, 6.0) * 2.4;
+
+        float baseWarm = smoothstep(10.0, -2.0, pos.y) * coreness;
+        sampleCol += vec3(0.48, 0.20, 0.05) * baseWarm * 0.75;
+
         float star = exp(-length(pos - vec3(-7.8, 33.5, 0.2)) * 1.4);
-        sampleCol += vec3(1.0, 0.95, 0.8) * star * 5.0;
+        sampleCol += vec3(1.0, 0.82, 0.88) * star * 5.0;
+
+        sampleCol *= 0.15 + 1.05 * clamp(pos.y / 28.0, 0.0, 1.0);
       } else {
-        vec3 darkCore   = vec3(0.35, 0.07, 0.02);
-        vec3 warmOrange = vec3(0.76, 0.28, 0.06);
-        vec3 hotTip     = vec3(0.95, 0.76, 0.50);
-        sampleCol = mix(darkCore, warmOrange, coreness * 0.92);
-        sampleCol = mix(sampleCol, hotTip, tip * 0.88);
-        sampleCol += hotTip * pow(tip, 2.5) * 2.8;
-        float jetDist = abs((pos.x + 6.5) * 0.7 - (pos.y - 25.0) * 0.35);
-        sampleCol += vec3(0.9, 0.5, 0.2)
-                   * exp(-jetDist * jetDist * 0.9)
-                   * smoothstep(22.0, 28.0, pos.y) * 0.8;
+        vec3 coreBlackW = vec3(0.22, 0.05, 0.01);
+        vec3 orange     = vec3(0.70, 0.26, 0.06);
+        vec3 hotTipW    = vec3(0.95, 0.78, 0.48);
+
+        sampleCol = mix(coreBlackW, orange, coreness * 0.92);
+        sampleCol = mix(sampleCol, hotTipW, tip * 0.88);
+        sampleCol += hotTipW * pow(tip, 2.8) * 4.0;
+        float baseWarmW = smoothstep(10.0, -2.0, pos.y) * coreness;
+        sampleCol += vec3(0.60, 0.22, 0.05) * baseWarmW * 0.6;
+        sampleCol *= 0.18 + 1.0 * clamp(pos.y / 28.0, 0.0, 1.0);
       }
 
-      // Fresnel rim
-      vec3 norm = calcNormal(pos);
-      float fresnel = pow(1.0 - abs(dot(normalize(rd), norm)), 2.0);
-      sampleCol += (uMode < 0.5
-        ? vec3(0.25, 0.65, 0.65)
-        : vec3(0.85, 0.45, 0.18)) * fresnel * (uMode < 0.5 ? 1.2 : 1.1);
+      float NdotV = abs(dot(normalize(rd), norm));
+      float fresPow = uMode < 0.5 ? 4.2 : 5.5;
+      float fresnel = pow(1.0 - NdotV, fresPow);
+      if(uMode < 0.5) {
+        sampleCol += vec3(0.58, 0.88, 0.91) * fresnel * 1.25;
+      } else {
+        sampleCol += vec3(0.95, 0.60, 0.25) * fresnel * 0.9;
+      }
 
-      // EGG high-freq detail at tips
-      sampleCol *= 1.0 + fbm(pos * 4.5 + 7.2) * 0.4
-                       * smoothstep(24.0, 29.0, pos.y);
-
-      // Top lighting
-      sampleCol *= 0.3 + 0.9 * h;
-
-      float alpha = density * 0.11;
+      float alphaH = density * 0.20
+        * mix(0.34, 1.0, smoothstep(-1.5, 13.0, pos.y))
+        * (0.55 + 0.45 * coreness);
+      float alpha = uMode < 0.5 ? alphaH : density * 0.07;
       col.rgb += sampleCol * alpha * (1.0 - col.a);
       col.a   += alpha * (1.0 - col.a);
 

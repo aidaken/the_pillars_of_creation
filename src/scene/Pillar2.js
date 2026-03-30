@@ -71,7 +71,7 @@ vec3 domainWarp(vec3 p) {
 
 float pillar2SDF(vec3 pos) {
   vec3 lp = pos;
-  lp *= 1.35;  // scale — makes pillar smaller than Pillar 1
+  lp *= 1.14;
 
   // Leans LEFT toward Pillar 1
   lp.x -= lp.y * 0.06;
@@ -81,18 +81,18 @@ float pillar2SDF(vec3 pos) {
 
   vec3 wp = domainWarp(lp);
 
-  // Main trunk — very slender, finger-like
+  // Main trunk — slender but readable next to Pillar 1
   float trunk = sdCapsule(wp,
     vec3(0.0, -1.5, 0.0),
     vec3(-1.0, 20.0, 0.0),
-    3.8 - lp.y * 0.12
+    4.35 - lp.y * 0.11
   );
 
   // Sharp single pointing tip
   float tipCap = sdCapsule(wp,
     vec3(-0.8, 18.0, 0.0),
     vec3(-1.5, 26.0, 0.0),
-    max(1.2 - lp.y * 0.03, 0.05)
+    max(1.45 - lp.y * 0.03, 0.08)
   );
 
   // Right side elbow bump — distinctive feature
@@ -132,22 +132,19 @@ float pillar2SDF(vec3 pos) {
 float pillar2Density(vec3 pos) {
   float sdf = pillar2SDF(pos);
   float yFade = smoothstep(-4.0, 2.0, pos.y)
-              * smoothstep(30.0, 23.0, pos.y);
-  float zFade = exp(-pos.z * pos.z * 0.016);
+              * smoothstep(31.0, 24.5, pos.y);
+  float zFade = exp(-pos.z * pos.z * 0.014);
   if(sdf > 4.5) return 0.0;
 
-  // Hard edge — 100% opaque core
-  float core = exp(-max(sdf, 0.0) * 0.18)
-             * clamp(-sdf * 0.35 + 0.95, 0.0, 1.0);
+  float core = exp(-max(sdf, 0.0) * 0.16)
+             * clamp(-sdf * 0.33 + 0.96, 0.0, 1.0);
 
-  // Narrow outer wisp
-  float outerGas = exp(-max(sdf, 0.0) * 0.40)
-                 * fbm(pos * 0.14 + 2.3) * 0.35;
+  float outerGas = exp(-max(sdf, 0.0) * 0.30)
+                 * fbm(pos * 0.11 + 2.3) * 0.58;
 
-  // Fraying tips
   float frayNoise = fbm(pos * 3.8 + 5.1);
-  float frayMask  = smoothstep(18.0, 24.0, pos.y);
-  float fray      = frayNoise * frayMask * 0.65;
+  float frayMask  = smoothstep(20.0, 25.0, pos.y);
+  float fray      = frayNoise * frayMask * 0.32;
 
   float density = max(core, outerGas) - fray;
   return clamp(density * zFade * yFade, 0.0, 1.0);
@@ -181,56 +178,64 @@ void main() {
     float density = pillar2Density(pos);
 
     if(density > 0.01) {
-      float h        = clamp(pos.y / 26.0, 0.0, 1.0);
       float coreness = clamp(-sdfVal / 3.0, 0.0, 1.0);
-      float tip      = pow(clamp((pos.y - 16.0) / 9.0, 0.0, 1.0), 1.3);
+      float tip      = pow(clamp((pos.y - 13.0) / 12.0, 0.0, 1.0), 1.15);
 
       vec3 sampleCol;
+      vec3 norm = calcNormal(pos);
+
       if(uMode < 0.5) {
-        // HUBBLE — burnt umber core, hot white tip
-        vec3 shadow = vec3(0.05, 0.015, 0.003);
-        vec3 sienna = vec3(0.30, 0.10, 0.03);
-        vec3 cream  = vec3(0.98, 0.95, 0.80);
-        sampleCol = mix(shadow, sienna, coreness * 0.88);
+        vec3 coreBlack  = vec3(0.028, 0.009, 0.002);
+        vec3 darkBrown  = vec3(0.18, 0.065, 0.016);
+        vec3 warmSienna = vec3(0.46, 0.19, 0.052);
+        vec3 warmTan    = vec3(0.72, 0.38, 0.11);
+        vec3 cream      = vec3(0.98, 0.94, 0.80);
+
+        sampleCol = mix(coreBlack, darkBrown, coreness * 0.5);
+        sampleCol = mix(sampleCol, warmSienna, coreness * 0.85);
+
+        float litFace = clamp(0.5 - pos.x * 0.06, 0.0, 1.0);
+        sampleCol = mix(sampleCol, warmTan,
+          litFace * coreness * 0.5);
+
         sampleCol = mix(sampleCol, cream, tip * 0.92);
-        sampleCol += cream * pow(tip, 4.0) * 3.5;
-        // Internal star-forming knots — reddish-orange upper third
-        float knotGlow = smoothstep(12.0, 18.0, pos.y)
-                       * fbm(pos * 1.8 + 3.3) * coreness * 0.6;
-        sampleCol += vec3(0.8, 0.25, 0.05) * knotGlow;
-        // Protostar at sharp apex
+        sampleCol += cream * pow(tip, 3.5) * 5.0;
+        sampleCol += vec3(1.0, 0.99, 0.96) * pow(tip, 5.5) * 3.2;
+
+        float baseWarm = smoothstep(10.0, -2.0, pos.y) * coreness;
+        sampleCol += vec3(0.48, 0.20, 0.05) * baseWarm * 0.75;
+
         float star = exp(-length(pos - vec3(-1.5, 26.5, 0.0)) * 2.2);
-        sampleCol += vec3(1.0, 0.97, 0.85) * star * 7.0;
+        sampleCol += vec3(1.0, 0.82, 0.88) * star * 7.0;
+
+        sampleCol *= 0.15 + 1.05 * clamp(pos.y / 28.0, 0.0, 1.0);
       } else {
-        // WEBB INFRARED
-        vec3 shadow = vec3(0.28, 0.06, 0.01);
-        vec3 orange = vec3(0.75, 0.28, 0.05);
-        vec3 hotTip = vec3(0.97, 0.82, 0.55);
-        sampleCol = mix(shadow, orange, coreness * 0.95);
-        sampleCol = mix(sampleCol, hotTip, tip * 0.90);
-        sampleCol += hotTip * pow(tip, 3.0) * 3.8;
-        // Webb reveals internal knot structure
-        float knotGlow = smoothstep(10.0, 18.0, pos.y)
-                       * fbm(pos * 2.0 + 4.1) * coreness * 0.9;
-        sampleCol += vec3(0.9, 0.35, 0.08) * knotGlow;
-        // Stellar jet
-        float jetAngle = (pos.x - 1.5) * 0.65 - (pos.y - 18.0) * 0.4;
-        sampleCol += vec3(0.95, 0.55, 0.15)
-          * exp(-jetAngle * jetAngle * 1.3)
-          * smoothstep(16.0, 22.0, pos.y) * 0.85;
+        vec3 coreBlackW = vec3(0.22, 0.05, 0.01);
+        vec3 orange     = vec3(0.70, 0.26, 0.06);
+        vec3 hotTipW    = vec3(0.95, 0.78, 0.48);
+
+        sampleCol = mix(coreBlackW, orange, coreness * 0.92);
+        sampleCol = mix(sampleCol, hotTipW, tip * 0.88);
+        sampleCol += hotTipW * pow(tip, 2.8) * 4.0;
+        float baseWarmW = smoothstep(10.0, -2.0, pos.y) * coreness;
+        sampleCol += vec3(0.60, 0.22, 0.05) * baseWarmW * 0.6;
+        sampleCol *= 0.18 + 1.0 * clamp(pos.y / 28.0, 0.0, 1.0);
       }
 
-      // Fresnel rim — tighter than Pillar 1 (power 6.0)
-      vec3 norm = calcNormal(pos);
-      float fresnel = pow(1.0 - abs(dot(normalize(rd), norm)), 6.0);
-      sampleCol += (uMode < 0.5
-        ? vec3(0.75, 0.95, 0.90)
-        : vec3(1.0,  0.65, 0.30)) * fresnel * (uMode < 0.5 ? 1.2 : 1.0);
+      float NdotV = abs(dot(normalize(rd), norm));
+      float fresPow = uMode < 0.5 ? 4.2 : 5.5;
+      float fresnel = pow(1.0 - NdotV, fresPow);
+      if(uMode < 0.5) {
+        sampleCol += vec3(0.58, 0.88, 0.91) * fresnel * 1.25;
+      } else {
+        sampleCol += vec3(0.95, 0.60, 0.25) * fresnel * 0.9;
+      }
 
-      // Top lighting
-      sampleCol *= 0.3 + 0.9 * h;
-
-      float alpha = density * (uMode < 0.5 ? 0.15 : 0.07);
+      float alpha = uMode < 0.5
+        ? density * 0.27
+            * mix(0.52, 1.0, smoothstep(-2.5, 19.0, pos.y))
+            * (0.62 + 0.38 * coreness)
+        : density * 0.07;
       col.rgb += sampleCol * alpha * (1.0 - col.a);
       col.a   += alpha * (1.0 - col.a);
 
@@ -260,7 +265,7 @@ export function createPillar2(scene) {
     side: THREE.BackSide,
   })
   const mesh = new THREE.Mesh(geo, mat)
-  mesh.position.set(0, 8, 0)
+  mesh.position.set(5.5, 9, 0)
   scene.add(mesh)
   return { mesh, mat }
 }
