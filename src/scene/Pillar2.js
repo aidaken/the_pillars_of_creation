@@ -71,7 +71,6 @@ vec3 domainWarp(vec3 p) {
 
 float pillar2SDF(vec3 pos) {
   vec3 lp = pos;
-  lp *= 1.14;
 
   // Leans LEFT toward Pillar 1
   lp.x -= lp.y * 0.06;
@@ -170,9 +169,7 @@ void main() {
     if(col.a > 0.95 || t > 110.0) break;
     vec3 pos = ro + rd * t;
 
-    if(pos.y < -5.0 || pos.y > 33.0 || abs(pos.x) > 16.0 || abs(pos.z) > 12.0) {
-      t += 2.0; continue;
-    }
+    if(length(pos) > 35.0) { t += 3.0; continue; }
 
     float sdfVal  = pillar2SDF(pos);
     float density = pillar2Density(pos);
@@ -262,9 +259,11 @@ export function createPillar2(scene) {
     },
     transparent: true,
     depthWrite: false,
+    depthTest: false,
     side: THREE.BackSide,
   })
   const mesh = new THREE.Mesh(geo, mat)
+  mesh.scale.set(0.72, 0.72, 0.72)
   mesh.position.set(5.5, 9, 0)
   scene.add(mesh)
   return { mesh, mat }

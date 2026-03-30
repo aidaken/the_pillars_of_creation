@@ -159,10 +159,7 @@ void main() {
     if(col.a > 0.95 || t > 110.0) break;
     vec3 pos = ro + rd * t;
 
-    float dx = abs(pos.x + 6.0);
-    if(dx > 18.0 || pos.y < -5.0 || pos.y > 38.0 || abs(pos.z) > 14.0) {
-      t += 2.0; continue;
-    }
+    if(length(pos) > 42.0) { t += 3.0; continue; }
 
     float sdfVal  = pillar1SDF(pos);
     float density = pillar1Density(pos);
@@ -252,6 +249,7 @@ export function createPillar1(scene) {
     },
     transparent: true,
     depthWrite: false,
+    depthTest: false,
     side: THREE.BackSide,
   })
   const mesh = new THREE.Mesh(geo, mat)

@@ -69,108 +69,86 @@ vec3 domainWarp(vec3 p) {
   return p + q + r;
 }
 
+// Raw SDF before waist erosion (used for normals / stepping).
 float pillar3SDF(vec3 pos) {
   vec3 lp = pos;
-  lp *= 1.6;  // scale up local = smaller rendered size
-
-  // Slight left lean
-  lp.x -= lp.y * 0.03;
-
-  // Organic warp — same as other pillars
+  lp.x -= lp.y * 0.04;
   vec3 wp = domainWarp(lp);
 
-  // Main trunk — wide and short
-  float trunk = sdCapsule(wp,
-    vec3(0.0, -2.0, 0.0),
-    vec3(-0.5, 10.0, 0.0),
-    6.5 - lp.y * 0.18   // very wide base, tapers
-  );
+  float base = sdSphere(wp, vec3(0.2, -2.1, 0.4), 5.5);
 
-  // Ragged broken stump top — irregular blobs not clean finger
-  float stump1 = sdSphere(wp, vec3(-0.5, 11.5, 0.0), 2.8);
-  float stump2 = sdSphere(wp, vec3(1.5,  10.5, 0.2), 2.2);
-  float stump3 = sdSphere(wp, vec3(-2.5, 10.0,-0.2), 1.8);
-
-  // Horizontal arm extending RIGHT — most distinctive feature
-  float arm = sdCapsule(wp,
-    vec3(1.0, 7.0,-0.2),
-    vec3(7.5, 6.0,-0.5),
-    1.4
-  );
-
-  // Arm tip blob
-  float armTip = sdSphere(wp, vec3(7.8, 6.0,-0.5), 1.8);
-
-  // Wide irregular base
-  float base = sdSphere(wp, vec3(0.5, -1.5, 0.5), 6.0);
-
-  // Small upward protrusion left side
-  float leftNub = sdCapsule(wp,
-    vec3(-3.5, 7.5, 0.3),
-    vec3(-4.5, 11.0, 0.2),
+  float neck = sdCapsule(wp,
+    vec3(0.1, 1.6, 0.0),
+    vec3(0.05, 6.9, 0.0),
     1.0
   );
 
-  // EGG nodules at stump top
-  float eggMask = smoothstep(8.0, 12.0, lp.y);
-  vec3 eggP = wp + fbm(wp*6.0+7.7)*0.4*eggMask;
-  float egg1 = sdSphere(eggP, vec3(-0.5,12.5,0.0), 0.7);
-  float egg2 = sdSphere(eggP, vec3(1.8, 11.5,0.2), 0.6);
+  float shoulder = sdCapsule(wp,
+    vec3(0.0, 5.2, 0.0),
+    vec3(0.0, 7.6, 0.0),
+    1.25
+  );
 
-  // Detached small satellite blobs below arm
-  float sat1 = sdSphere(wp, vec3(4.5, 2.5,-1.5), 0.9);
-  float sat2 = sdSphere(wp, vec3(-5.5, 3.5, 1.8), 0.75);
+  float peakL = sdCapsule(wp,
+    vec3(-0.95, 6.5, 0.06),
+    vec3(-2.0, 12.6, 0.16),
+    0.9
+  );
+  float peakR = sdCapsule(wp,
+    vec3(1.05, 6.4, -0.04),
+    vec3(2.05, 12.0, -0.14),
+    0.84
+  );
+  float peaks = smin(peakL, peakR, 0.2);
 
-  // Smooth union
-  float k = 3.5;
-  float d = trunk;
-  d = smin(d, stump1, k*0.8);
-  d = smin(d, stump2, k*0.7);
-  d = smin(d, stump3, k*0.7);
-  d = smin(d, arm,    k*0.6);
-  d = smin(d, armTip, k*0.5);
-  d = smin(d, base,   k*1.2);
-  d = smin(d, leftNub,k*0.7);
-  d = smin(d, egg1,   0.30);
-  d = smin(d, egg2,   0.30);
-
-  // Satellites separate and sharp
-  d = min(d, sat1);
-  d = min(d, sat2);
-
+  float d = base;
+  d = smin(d, neck, 1.7);
+  d = smin(d, shoulder, 1.05);
+  d = smin(d, peaks, 0.92);
   return d;
 }
 
+float waistErode(vec3 pos) {
+  float waist = smoothstep(1.4, 3.6, pos.y) * smoothstep(8.0, 4.6, pos.y);
+  return 0.5 * fbm(pos * 3.4 + vec3(2.1, 0.7, 1.9)) * waist;
+}
+
+float pillar3SDFEffective(vec3 pos) {
+  return pillar3SDF(pos) + waistErode(pos);
+}
+
 float pillar3Density(vec3 pos) {
-  float sdf = pillar3SDF(pos);
-  float yFade = smoothstep(-4.0, 2.0, pos.y)
-              * smoothstep(18.0, 13.0, pos.y);  // much shorter
-  float zFade = exp(-pos.z * pos.z * 0.016);
-  if(sdf > 4.5) return 0.0;
+  float sdf0 = pillar3SDF(pos);
+  float sdf = sdf0 + waistErode(pos);
+  float yFade = smoothstep(-5.0, 2.0, pos.y)
+              * smoothstep(20.0, 11.5, pos.y);
+  float zFade = 0.88 + 0.12 * exp(-pos.z * pos.z * 0.008);
+  if(sdf > 5.2) return 0.0;
 
-  // Hard edge — 100% opaque core
-  float core = exp(-max(sdf, 0.0) * 0.18)
-             * clamp(-sdf * 0.35 + 0.95, 0.0, 1.0);
+  float topSolid = smoothstep(8.5, 11.2, pos.y);
+  float core = exp(-max(sdf, 0.0) * (0.15 + 0.11 * topSolid))
+             * clamp(-sdf * 0.34 + 0.95, 0.0, 1.0);
 
-  // Narrow outer wisp
-  float outerGas = exp(-max(sdf, 0.0) * 0.33)
-                 * fbm(pos * 0.12 + 2.3) * 0.55;
+  float outerGas = exp(-max(sdf, 0.0) * 0.28)
+                 * fbm(pos * 0.11 + 2.3) * 0.56;
 
-  // Fraying tips
+  float island = mix(0.52, 1.0, smoothstep(-5.0, 1.5, pos.y))
+               * mix(0.62, 1.0, smoothstep(4.5, 9.0, pos.y));
   float frayNoise = fbm(pos * 3.8 + 5.1);
-  float frayMask  = smoothstep(10.0, 16.0, pos.y);
-  float fray      = frayNoise * frayMask * 0.65;
+  float frayMask  = smoothstep(10.0, 15.5, pos.y);
+  float fray      = frayNoise * frayMask * 0.4;
 
   float density = max(core, outerGas) - fray;
+  density *= island;
   return clamp(density * zFade * yFade, 0.0, 1.0);
 }
 
 vec3 calcNormal(vec3 pos) {
-  vec2 e = vec2(0.3, 0.0);
+  vec2 e = vec2(0.28, 0.0);
   return normalize(vec3(
-    pillar3SDF(pos+e.xyy) - pillar3SDF(pos-e.xyy),
-    pillar3SDF(pos+e.yxy) - pillar3SDF(pos-e.yxy),
-    pillar3SDF(pos+e.yyx) - pillar3SDF(pos-e.yyx)
+    pillar3SDFEffective(pos+e.xyy) - pillar3SDFEffective(pos-e.xyy),
+    pillar3SDFEffective(pos+e.yxy) - pillar3SDFEffective(pos-e.yxy),
+    pillar3SDFEffective(pos+e.yyx) - pillar3SDFEffective(pos-e.yyx)
   ));
 }
 
@@ -182,19 +160,18 @@ void main() {
   float t = 0.1;
 
   for(int i=0; i<80; i++) {
-    if(col.a > 0.95 || t > 110.0) break;
+    if(col.a > 0.95 || t > 120.0) break;
     vec3 pos = ro + rd * t;
 
-    if(pos.y < -5.0 || pos.y > 20.0 || abs(pos.x) > 20.0 || abs(pos.z) > 14.0) {
-      t += 2.0; continue;
-    }
+    if(length(pos) > 28.0) { t += 3.0; continue; }
 
-    float sdfVal  = pillar3SDF(pos);
+    float sdfVal  = pillar3SDFEffective(pos);
     float density = pillar3Density(pos);
 
-    if(density > 0.01) {
-      float coreness = clamp(-sdfVal / 3.0, 0.0, 1.0);
-      float tip      = pow(clamp((pos.y-7.0)/6.0,0.0,1.0),1.5);
+    if(density > 0.006) {
+      float sdfForCore = pillar3SDFEffective(pos);
+      float coreness = clamp(-sdfForCore / 3.0, 0.0, 1.0);
+      float tip = pow(clamp((pos.y - 7.5) / 5.5, 0.0, 1.0), 1.35);
 
       vec3 sampleCol;
       vec3 norm = calcNormal(pos);
@@ -203,25 +180,27 @@ void main() {
         vec3 coreBlack  = vec3(0.028, 0.009, 0.002);
         vec3 darkBrown  = vec3(0.18, 0.065, 0.016);
         vec3 warmSienna = vec3(0.46, 0.19, 0.052);
-        vec3 warmTan    = vec3(0.72, 0.38, 0.11);
-        vec3 cream      = vec3(0.98, 0.94, 0.80);
+        vec3 creamWarm  = vec3(0.96, 0.93, 0.82);
+        vec3 coolHi     = vec3(0.90, 0.93, 1.0);
+        vec3 iceTip     = vec3(0.82, 0.90, 1.0);
 
         sampleCol = mix(coreBlack, darkBrown, coreness * 0.5);
         sampleCol = mix(sampleCol, warmSienna, coreness * 0.85);
 
         float litFace = clamp(0.5 - pos.x * 0.06, 0.0, 1.0);
-        sampleCol = mix(sampleCol, warmTan,
-          litFace * coreness * 0.5);
+        sampleCol = mix(sampleCol, mix(creamWarm, coolHi, 0.55),
+          litFace * coreness * 0.45);
 
-        sampleCol = mix(sampleCol, cream, tip * 0.92);
-        sampleCol += cream * pow(tip, 3.5) * 4.2;
-        sampleCol += vec3(1.0, 0.99, 0.96) * pow(tip, 6.0) * 2.4;
+        sampleCol = mix(sampleCol, coolHi, tip * 0.88);
+        sampleCol += mix(creamWarm, iceTip, tip) * pow(tip, 3.2) * 4.5;
+        sampleCol += iceTip * pow(tip, 5.5) * 2.8;
 
         float baseWarm = smoothstep(10.0, -2.0, pos.y) * coreness;
-        sampleCol += vec3(0.48, 0.20, 0.05) * baseWarm * 0.75;
+        sampleCol += vec3(0.42, 0.17, 0.05) * baseWarm * 0.55;
 
-        float star = exp(-length(pos-vec3(-0.5,12.5,0.0))*2.5);
-        sampleCol += vec3(1.0, 0.82, 0.88) * star * 6.0;
+        float starL = exp(-length(pos - vec3(-2.0, 12.7, 0.16)) * 2.3);
+        float starR = exp(-length(pos - vec3(2.05, 12.0, -0.14)) * 2.3);
+        sampleCol += vec3(0.88, 0.92, 1.0) * (starL + starR) * 5.5;
 
         sampleCol *= 0.15 + 1.05 * clamp(pos.y / 28.0, 0.0, 1.0);
       } else {
@@ -241,22 +220,26 @@ void main() {
       float fresPow = uMode < 0.5 ? 4.2 : 5.5;
       float fresnel = pow(1.0 - NdotV, fresPow);
       if(uMode < 0.5) {
-        sampleCol += vec3(0.58, 0.88, 0.91) * fresnel * 1.25;
+        float rimBreak = 0.38 + 0.62 * smoothstep(0.25, 0.85, fbm(pos * 6.8 + norm * 1.5));
+        rimBreak *= 0.55 + 0.45 * step(0.4, fbm(pos * 12.3 + 4.1));
+        sampleCol += vec3(0.52, 0.86, 0.92) * fresnel * 1.35 * rimBreak;
       } else {
         sampleCol += vec3(0.95, 0.60, 0.25) * fresnel * 0.9;
       }
 
-      // Rightmost pillar: ghostlier base (reference photo)
-      float alphaH = density * 0.20
-        * mix(0.24, 1.0, smoothstep(-2.0, 10.0, pos.y))
-        * (0.52 + 0.48 * coreness);
+      float tipOpaque = smoothstep(7.0, 11.5, pos.y);
+      float bodyGhost = mix(0.32, 1.0, tipOpaque)
+                      * mix(0.4, 1.0, 0.65 + 0.35 * coreness);
+      float alphaH = density * 0.26 * bodyGhost
+        * mix(0.4, 1.0, smoothstep(-3.0, 11.0, pos.y))
+        * (0.55 + 0.45 * coreness);
       float alpha = uMode < 0.5 ? alphaH : density * 0.07;
       col.rgb += sampleCol * alpha * (1.0 - col.a);
       col.a   += alpha * (1.0 - col.a);
 
-      t += max(abs(sdfVal) * 0.3, 0.22);
+      t += max(abs(sdfVal) * 0.32, 0.22);
     } else {
-      t += max(abs(sdfVal) * 0.5, 0.55);
+      t += max(abs(sdfVal) * 0.52, 0.58);
     }
   }
 
@@ -266,7 +249,7 @@ void main() {
 `
 
 export function createPillar3(scene) {
-  const geo = new THREE.SphereGeometry(40, 24, 24)
+  const geo = new THREE.SphereGeometry(62, 24, 24)
   const mat = new THREE.ShaderMaterial({
     vertexShader: vertSrc,
     fragmentShader: fragSrc,
@@ -277,10 +260,12 @@ export function createPillar3(scene) {
     },
     transparent: true,
     depthWrite: false,
+    depthTest: false,
     side: THREE.BackSide,
   })
   const mesh = new THREE.Mesh(geo, mat)
-  mesh.position.set(0, 5, 0)
+  mesh.scale.set(0.62, 0.62, 0.62)
+  mesh.position.set(26, 6, 22)
   scene.add(mesh)
   return { mesh, mat }
 }
