@@ -53,6 +53,22 @@ float sdSphere(vec3 p, vec3 c, float r) {
   return length(p-c)-r;
 }
 
+vec3 domainWarp(vec3 p) {
+  float s1 = 0.20;
+  vec3 q = vec3(
+    fbm(p * s1),
+    fbm(p * s1 + vec3(5.2, 1.3, 2.8)) * 0.3,
+    fbm(p * s1 + vec3(1.7, 9.2, 3.4))
+  ) * 3.0;
+  float s2 = 0.55;
+  vec3 r = vec3(
+    fbm(p * s2 + q),
+    fbm(p * s2 + q + vec3(8.3, 2.8, 5.1)) * 0.3,
+    fbm(p * s2 + q + vec3(4.1, 7.6, 1.9))
+  ) * 0.9;
+  return p + q + r;
+}
+
 float pillar2SDF(vec3 pos) {
   vec3 lp = pos;
   lp *= 1.35;  // scale — makes pillar smaller than Pillar 1
@@ -63,18 +79,7 @@ float pillar2SDF(vec3 pos) {
   // Gentle forward curve
   lp.z += sin(lp.y * 0.12) * 0.5;
 
-  // Shredded vertical texture — anisotropic, suppressed on y
-  vec3 shred = vec3(
-    fbm(vec3(lp.x*4.5, lp.y*0.25, lp.z*4.5)) * 1.8,
-    0.0,
-    fbm(vec3(lp.x*4.5, lp.y*0.25, lp.z*4.5) + 5.1) * 1.8
-  );
-  vec3 structural = vec3(
-    fbm(lp * 0.18 + vec3(2.3, 0.0, 1.1)) * 1.4,
-    0.0,
-    fbm(lp * 0.18 + vec3(6.1, 0.0, 3.8)) * 1.4
-  );
-  vec3 wp = lp + shred + structural;
+  vec3 wp = domainWarp(lp);
 
   // Main trunk — very slender, finger-like
   float trunk = sdCapsule(wp,

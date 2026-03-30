@@ -59,13 +59,13 @@ vec3 domainWarp(vec3 p) {
     fbm(p * s1),
     fbm(p * s1 + vec3(5.2, 1.3, 2.8)) * 0.3,
     fbm(p * s1 + vec3(1.7, 9.2, 3.4))
-  ) * 3.5;
-  float s2 = 0.60;
+  ) * 3.0;
+  float s2 = 0.55;
   vec3 r = vec3(
     fbm(p * s2 + q),
-    fbm(p * s2 + q + vec3(8.3, 2.8, 5.1)),
+    fbm(p * s2 + q + vec3(8.3, 2.8, 5.1)) * 0.3,
     fbm(p * s2 + q + vec3(4.1, 7.6, 1.9))
-  ) * 1.2;
+  ) * 0.9;
   return p + q + r;
 }
 
