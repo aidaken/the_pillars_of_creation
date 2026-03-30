@@ -57,7 +57,7 @@ vec3 domainWarp(vec3 p) {
   float s1 = 0.20;
   vec3 q = vec3(
     fbm(p * s1),
-    fbm(p * s1 + vec3(5.2, 1.3, 2.8)),
+    fbm(p * s1 + vec3(5.2, 1.3, 2.8)) * 0.3,
     fbm(p * s1 + vec3(1.7, 9.2, 3.4))
   ) * 3.5;
   float s2 = 0.60;
@@ -70,53 +70,59 @@ vec3 domainWarp(vec3 p) {
 }
 
 float pillar1SDF(vec3 pos) {
-  vec3 lp = pos - vec3(-6.0, 0.0, 0.0);
+  vec3 lp = pos - vec3(0.0, 0.0, 0.0);
   lp.x -= lp.y * 0.03;
+  lp.x += sin(lp.y * 0.18) * 1.2;
+  lp.z += cos(lp.y * 0.14) * 0.6;
   vec3 wp = domainWarp(lp);
 
   // Main trunk — wide base tapering upward
   float trunk = sdCapsule(wp,
     vec3(0.0, -1.0, 0.0),
     vec3(-0.5, 21.0, 0.0),
-    5.2 - lp.y * 0.09
+    7.0 - lp.y * 0.12
   );
 
   // Mushroom cap — overhangs LEFT
-  float cap = sdSphere(wp, vec3(-2.0, 22.5, 0.0), 5.0);
+  float cap = sdSphere(wp, vec3(-1.5, 21.0, 0.0), 6.5);
 
   // Left side secondary bulge
   float bulge = sdSphere(wp, vec3(-5.0, 10.5, 0.3), 3.2);
 
-  // Left finger — taller, leans further left
   float leftFinger = sdCapsule(wp,
-    vec3(-1.5, 18.0, 0.2),
-    vec3(-3.5, 30.0, 0.1),
-    1.8
+    vec3(-2.0, 17.0, 0.3),
+    vec3(-4.0, 32.0, 0.2),
+    2.2
   );
 
-  // Right finger — shorter, leans slightly right
+  float centerFinger = sdCapsule(wp,
+    vec3(0.5, 18.0, 0.0),
+    vec3(0.0, 28.0, 0.0),
+    2.0
+  );
+
   float rightFinger = sdCapsule(wp,
-    vec3(1.0, 17.5, -0.2),
-    vec3(2.0, 26.5, -0.2),
-    1.5
+    vec3(2.5, 16.5, -0.3),
+    vec3(3.5, 24.0, -0.2),
+    1.6
   );
 
   // EGG nodules at fingertips
   float eggMask = smoothstep(22.0, 27.0, lp.y);
   vec3 eggP = wp + fbm(wp * 4.2 + 8.1) * 0.6 * eggMask;
-  float egg1 = sdSphere(eggP, vec3(-3.5, 30.5, 0.1), 0.9);
-  float egg2 = sdSphere(eggP, vec3( 1.8, 26.8,-0.2), 0.75);
-  float egg3 = sdSphere(eggP, vec3(-1.0, 32.0, 0.2), 0.65);
+  float egg1 = sdSphere(eggP, vec3(-4.0, 32.5, 0.2), 0.9);
+  float egg2 = sdSphere(eggP, vec3(0.0, 28.5, 0.0), 0.75);
+  float egg3 = sdSphere(eggP, vec3(3.5, 24.5, -0.2), 0.65);
 
-  float k = 3.5;
   float d = trunk;
-  d = smin(d, cap,         k * 1.5);
-  d = smin(d, bulge,       k * 1.2);
-  d = smin(d, leftFinger,  k * 0.8);
-  d = smin(d, rightFinger, k * 0.8);
-  d = smin(d, egg1,        k * 0.25);
-  d = smin(d, egg2,        k * 0.25);
-  d = smin(d, egg3,        k * 0.25);
+  d = smin(d, cap, 4.0);
+  d = smin(d, bulge, 3.5);
+  d = smin(d, leftFinger, 1.8);
+  d = smin(d, centerFinger, 1.8);
+  d = smin(d, rightFinger, 1.8);
+  d = smin(d, egg1, 0.4);
+  d = smin(d, egg2, 0.4);
+  d = smin(d, egg3, 0.4);
   return d;
 }
 

@@ -6,7 +6,24 @@ import { createNebulaBg, setNebulaMode } from './scene/NebulaBg'
 import { addLights } from './scene/lights'
 import { createFlyControls } from './scene/FlyControls'
 import { createPillar1, tickPillar1 } from './scene/Pillar1'
+import { createJwstObserver, tickJwstObserver } from './scene/JwstObserver'
 import SpectralToggle from './components/SpectralToggle'
+
+const hudCorner = {
+  position: 'absolute',
+  maxWidth: 'min(42vw, 22rem)',
+  padding: '10px 12px',
+  fontFamily: '"JetBrains Mono", "SF Mono", "Consolas", "Liberation Mono", monospace',
+  fontSize: 10,
+  letterSpacing: '0.12em',
+  lineHeight: 1.5,
+  color: 'rgba(210, 225, 245, 0.88)',
+  background: 'rgba(4, 10, 22, 0.42)',
+  border: '1px solid rgba(120, 160, 210, 0.28)',
+  borderRadius: 2,
+  pointerEvents: 'none',
+  zIndex: 30,
+}
 
 export default function App() {
   const canvasRef = useRef(null)
@@ -37,12 +54,15 @@ export default function App() {
     const p1 = createPillar1(sceneManager.scene)
     pillar1Ref.current = p1
 
+    const jwst = createJwstObserver(sceneManager.scene)
+
     let rafId
     const tick = () => {
       rafId = requestAnimationFrame(tick)
       flyControls.tick()
       pillarMat.uniforms.uCamPos.value.copy(sceneManager.camera.position).sub(pillarMesh.position)
       tickPillar1(p1.mat, p1.mesh, sceneManager.camera)
+      tickJwstObserver(jwst.mat, sceneManager.camera)
       sceneManager.renderer.render(sceneManager.scene, sceneManager.camera)
     }
     rafId = requestAnimationFrame(tick)
@@ -64,7 +84,29 @@ export default function App() {
 
   return (
     <>
-      <div ref={canvasRef} style={{ width: '100vw', height: '100vh' }} />
+      <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
+        <div
+          ref={canvasRef}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+          }}
+        />
+        <div style={{ ...hudCorner, top: 16, left: 16, textAlign: 'left' }}>
+          MISSION: JWST | OBS: M16_PILLARS
+        </div>
+        <div style={{ ...hudCorner, top: 16, right: 16, left: 'auto', textAlign: 'right' }}>
+          INSTRUMENT: NIRCAM | FILTER: F200W/F444W
+        </div>
+        <div style={{ ...hudCorner, bottom: 16, left: 16, top: 'auto', textAlign: 'left' }}>
+          COORDS: 18h 18m 48s, −13° 49′ 0″
+        </div>
+        <div style={{ ...hudCorner, bottom: 16, right: 16, left: 'auto', top: 'auto', textAlign: 'right' }}>
+          SIMULATION SCALE: 1 UNIT = 0.1 LIGHT YEARS
+        </div>
+      </div>
       <SpectralToggle mode={spectralMode} onToggle={handleToggle} />
       {showHint && (
         <div style={{
@@ -75,6 +117,7 @@ export default function App() {
           fontFamily: 'monospace',
           pointerEvents: 'none',
           transition: 'opacity 1s',
+          zIndex: 40,
         }}>
           CLICK TO LOOK · WASD FLY · SPACE UP · SHIFT DOWN · Q/E/Z/C DIAGONAL · SCROLL ZOOM
         </div>
