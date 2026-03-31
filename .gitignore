@@ -3,6 +3,20 @@ dist
 .DS_Store
 *.local
 
+# Env / secrets (Vite loads .env.local by default — never commit real secrets)
+.env
+.env.local
+.env.*.local
+
+# Caches & coverage
+.eslintcache
+.prettiercache
+coverage
+*.tsbuildinfo
+
+# Deployment
+.vercel
+
 # Logs
 logs
 *.log
@@ -13,6 +27,8 @@ pnpm-debug.log*
 lerna-debug.log*
 
 dist-ssr
+
+explanation_of_the_project.txt
 
 # Editor directories and files
 .vscode/*
