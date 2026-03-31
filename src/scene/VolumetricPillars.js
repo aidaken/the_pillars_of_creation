@@ -54,10 +54,22 @@ float sampleMask(vec3 pos) {
   // Z: -12 to 12  (depth)
 
   // U = horizontal = X axis
-  float u = clamp((pos.x + 14.0) / 28.0, 0.0, 1.0);
+  float sampleX = pos.x;
+  float sampleY = pos.y;
+
+  // For pillar 3 (right) move the texturing lookup further right and higher
+  // so it is visually separated from pillar 2 (center) and appears taller.
+  if (pos.x > 5.0) {
+    sampleX += 6.5;
+    sampleY += 2.8;
+  }
+
+  float pillarStretch = 1.06;
+  float xStretched = sampleX * pillarStretch;
+  float u = clamp((xStretched + 14.0) / 28.0, 0.0, 1.0);
 
   // V = vertical = Y axis (V=0 is TOP of image, V=1 is BOTTOM)
-  float v = clamp(1.0 - ((pos.y + 2.0) / 32.0), 0.0, 1.0);
+  float v = clamp(1.0 - ((sampleY + 2.0) / 32.0), 0.0, 1.0);
 
   // Crop to pillar region in image
   u = 0.10 + u * 0.80;
@@ -90,7 +102,7 @@ float hybridDensity(vec3 pos) {
 
   float yFade = smoothstep(-2.0, 1.5, pos.y)
               * smoothstep(32.0, 26.0, pos.y);
-  float xFade = smoothstep(16.0, 9.0, abs(pos.x));
+  float xFade = smoothstep(20.0, 10.0, abs(pos.x));
   float zFade = smoothstep(13.0, 5.0, abs(pos.z));
 
   float density = maskVal * fbmVal * yFade * xFade * zFade;
