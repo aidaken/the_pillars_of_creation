@@ -37,8 +37,8 @@ src/
 ├── scene/
 │   ├── SceneManager.js          # Renderer, camera, resize handler
 │   ├── FlyControls.js           # First-person fly camera (pointer lock + touch)
-│   ├── VolumetricPillars.js     # Texture-masked ray march — all 3 pillars as one volume
-│   ├── Pillar1.js               # Pillar 1 (Elephant Trunk) — SDF ray march, domain warped
+│   ├── VolumetricPillars.js     # Texture-masked ray march - all 3 pillars as one volume
+│   ├── Pillar1.js               # Pillar 1 (Elephant Trunk) - SDF ray march, domain warped
 │   ├── NebulaBg.js              # Dual particle nebula background (Hubble + Webb sets)
 │   ├── StarField.js             # Procedural star field
 │   ├── lights.js                # Ambient + key/fill/rim directional lights
@@ -62,19 +62,19 @@ density = maskLuminance × FBM(pos) × yFade × xFade × zFade
 
 Color is selected per-step based on height and density, with two branches driven by `uMode` (0.0 = Hubble, 1.0 = Webb).
 
-### Pillar1.js — SDF ray march with domain warping
+### Pillar1.js - SDF ray march with domain warping
 
 Pillar 1 (the Elephant Trunk, leftmost) is a fully procedural signed distance field volume:
 
 **Shape primitives**
-- `sdCapsule` — trunk body and three finger peaks
-- `sdSphere` — mushroom cap, left-side bulge, EGG nodules at fingertips
-- `smin(k)` — smooth union melts all shapes together. High k at cap/trunk junction for heavy blending, low k at EGG nodules to keep them sharp
+- `sdCapsule` - trunk body and three finger peaks
+- `sdSphere` - mushroom cap, left-side bulge, EGG nodules at fingertips
+- `smin(k)` - smooth union melts all shapes together. High k at cap/trunk junction for heavy blending, low k at EGG nodules to keep them sharp
 
 **Domain warping**
 Two-layer FBM warp applied to position before any SDF evaluation:
-- Layer 1 (scale 0.20, amplitude 3.5) — large structural deformation, creates ridges and valleys
-- Layer 2 (scale 0.60, amplitude 1.2) — fine surface detail, creates fibrous texture
+- Layer 1 (scale 0.20, amplitude 3.5) - large structural deformation, creates ridges and valleys
+- Layer 2 (scale 0.60, amplitude 1.2) - fine surface detail, creates fibrous texture
 
 **Density**
 ```
@@ -127,4 +127,4 @@ npm run preview   # serve dist/ locally
 
 ## Textures
 
-`public/textures/pillars_mask.png` — NASA Hubble photograph used as a 2D density mask for the volumetric ray march. Tracked via Git LFS. The shader reads its luminance channel to determine gas density in world space, mapping image X to world X and image Y to world Y (portrait orientation, pillars run bottom to top).
+`public/textures/pillars_mask.png` - NASA Hubble photograph used as a 2D density mask for the volumetric ray march. Tracked via Git LFS. The shader reads its luminance channel to determine gas density in world space, mapping image X to world X and image Y to world Y (portrait orientation, pillars run bottom to top).

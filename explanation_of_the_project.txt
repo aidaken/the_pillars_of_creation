@@ -23,7 +23,6 @@ North Star Metric: Sessions where a user completes at least one spectral
 toggle AND spends 30+ seconds interacting with a pillar region.
 
 Tech stack: React 18, Vite, Three.js, GLSL shaders via vite-plugin-glsl.
-AI tools in use: Claude Code, GitHub Copilot, Cursor.
 Developers: Aidar (19, leads architecture + shaders) and Akmatbek (14, 
 handles UI components, hotspot content, testing).
 Hardware: M3 MacBook Air 13-inch.

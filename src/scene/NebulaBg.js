@@ -52,11 +52,11 @@ function tealColor() {
 }
 
 export function createNebulaBg(scene) {
-  // Webb mode — warm orange
+  // Webb mode - warm orange
   const webbA = buildCloud(12000, -120, -10, warmColor)
   const webbB = buildCloud(6000, -10, 60, warmColor)
 
-  // Hubble mode — cool teal-blue
+  // Hubble mode - cool teal-blue
   const hubbleA = buildCloud(12000, -120, -10, tealColor, 0.35, 0.65)
   const hubbleB = buildCloud(6000, -10, 60, tealColor, 0.35, 0.65)
 

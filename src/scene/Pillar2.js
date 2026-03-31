@@ -80,7 +80,7 @@ float pillar2SDF(vec3 pos) {
 
   vec3 wp = domainWarp(lp);
 
-  // Main trunk — slender but readable next to Pillar 1
+  // Main trunk - slender but readable next to Pillar 1
   float trunk = sdCapsule(wp,
     vec3(0.0, -1.5, 0.0),
     vec3(-1.0, 20.0, 0.0),
@@ -94,7 +94,7 @@ float pillar2SDF(vec3 pos) {
     max(1.45 - lp.y * 0.03, 0.08)
   );
 
-  // Right side elbow bump — distinctive feature
+  // Right side elbow bump - distinctive feature
   float elbow = sdSphere(wp, vec3(3.5, 11.0, -0.3), 2.8);
 
   // Small secondary protrusion right side upper
@@ -104,7 +104,7 @@ float pillar2SDF(vec3 pos) {
     1.0
   );
 
-  // Base — widens to connect with shared cloud
+  // Base - widens to connect with shared cloud
   float base = sdSphere(wp, vec3(0.0, -0.5, 0.3), 4.5);
 
   // EGG nodules at very tip

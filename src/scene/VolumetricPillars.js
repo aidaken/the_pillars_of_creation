@@ -75,17 +75,17 @@ float sampleMask(vec3 pos) {
   u = 0.10 + u * 0.80;
   v = 0.02 + v * 0.96;
 
-  // Tiny FBM warp — just enough to break hard edges
+  // Tiny FBM warp - just enough to break hard edges
   float wx = (fbm(vec3(pos.x * 0.05, pos.y * 0.04, pos.z * 0.03)) - 0.5) * 0.025;
   float wy = (fbm(vec3(pos.y * 0.05, pos.z * 0.04, pos.x * 0.03) + 2.1) - 0.5) * 0.025;
 
   vec2 uv = clamp(vec2(u + wx, v + wy), 0.01, 0.99);
   float lum = dot(texture2D(uPillarMask, uv).rgb, vec3(0.299, 0.587, 0.114));
 
-  // Z depth falloff — gaussian-style
+  // Z depth falloff - gaussian-style
   float zFalloff = exp(-pos.z * pos.z * 0.008);
 
-  // Threshold — remove dark background
+  // Threshold - remove dark background
   float threshold = smoothstep(0.05, 0.18, lum);
 
   return lum * zFalloff * threshold;

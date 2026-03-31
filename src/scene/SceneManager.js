@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 
 export class SceneManager {
-  // Accepts a container div — Three.js creates its own canvas so each
+  // Accepts a container div - Three.js creates its own canvas so each
   // mount gets a fresh WebGL context (avoids StrictMode context-reuse issues)
   constructor(container) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true })

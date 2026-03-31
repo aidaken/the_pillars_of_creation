@@ -76,14 +76,14 @@ float pillar1SDF(vec3 pos) {
   lp.z += cos(lp.y * 0.14) * 0.6;
   vec3 wp = domainWarp(lp);
 
-  // Main trunk — wide base tapering upward
+  // Main trunk - wide base tapering upward
   float trunk = sdCapsule(wp,
     vec3(0.0, -1.0, 0.0),
     vec3(-0.5, 21.0, 0.0),
     7.0 - lp.y * 0.12
   );
 
-  // Mushroom cap — overhangs LEFT
+  // Mushroom cap - overhangs LEFT
   float cap = sdSphere(wp, vec3(-1.5, 21.0, 0.0), 6.5);
 
   // Left side secondary bulge
