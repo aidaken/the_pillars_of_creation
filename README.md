@@ -1,16 +1,6 @@
-# Pillars of Creation — 3D Spectral Explorer
+# Pillars of Creation: Spectral Explorer 3D
 
 An interactive real-time 3D rendering of the Eagle Nebula's Pillars of Creation, built with React, Three.js, and custom GLSL shaders. Fly through the gas columns in first-person and toggle between Hubble visible-light and Webb infrared color palettes.
-
----
-
-## What It Does
-
-- **Free-fly camera** — click to lock pointer, WASD to fly, Space/Shift for vertical, Q/E/Z/C for diagonals, scroll to zoom, touch drag on mobile
-- **Volumetric ray marching** — pillars rendered as real volumes, not meshes. A fragment shader casts rays through a density field, evaluating gas presence at each step
-- **Spectral toggle** — switch between Hubble (brown-red pillars, teal nebula) and Webb infrared (orange-red pillars, warm background) in real time via a GLSL uniform
-- **Dual nebula background** — two pre-built particle clouds swap on toggle, each color-matched to its palette
-- **Procedural star field** — hero stars in a tight sphere + 6000 background stars on a large shell, all rendered as round-dot particles
 
 ---
 
@@ -18,10 +8,10 @@ An interactive real-time 3D rendering of the Eagle Nebula's Pillars of Creation,
 
 | | |
 |---|---|
-| React 18 | UI state, spectral toggle component |
-| Three.js 0.183 | WebGL renderer, scene graph, camera |
-| Vite 8 | Dev server, ESM bundling |
-| GLSL | Vertex + fragment shaders embedded as template literals |
+| React 18 + Vite | UI state, spectral toggle, hint overlay |
+| Three.js r183 | WebGL renderer, scene graph, camera |
+| GLSL | Vertex + fragment shaders embedded as JS template literals |
+| Custom FlyControls | Free-fly 6DOF camera (Pointer Lock + touch) |
 
 No backend. No external API. Runs entirely in the browser.
 
@@ -31,67 +21,37 @@ No backend. No external API. Runs entirely in the browser.
 
 ```
 src/
-├── App.jsx                      # Root — wires scene, controls, toggle, hint UI
-├── components/
-│   └── SpectralToggle.jsx       # Hubble ↔ Webb toggle button
-├── scene/
-│   ├── SceneManager.js          # Renderer, camera, resize handler
-│   ├── FlyControls.js           # First-person fly camera (pointer lock + touch)
-│   ├── VolumetricPillars.js     # Texture-masked ray march - all 3 pillars as one volume
-│   ├── Pillar1.js               # Pillar 1 (Elephant Trunk) - SDF ray march, domain warped
-│   ├── NebulaBg.js              # Dual particle nebula background (Hubble + Webb sets)
-│   ├── StarField.js             # Procedural star field
-│   ├── lights.js                # Ambient + key/fill/rim directional lights
-│   └── DustClouds.js            # Dust particles (available, not currently mounted)
-└── utils/
-    └── makeCircleTexture.js     # Canvas-generated circle texture for round PointsMaterial dots
+  components/
+    SpectralToggle.jsx    — Hubble/Webb toggle UI (bottom center)
+  scene/
+    SceneManager.js       — WebGLRenderer, camera, resize handler
+    FlyControls.js        — Free-fly 6DOF camera (pointer lock + touch)
+    lights.js             — Ambient + key/fill/rim point lights
+    StarField.js          — 6000 bg stars on shell r=280-330 + 200 hero stars
+    NebulaBgShader.js     — Procedural shader nebula (r=480 sphere, renderOrder -100)
+    Pillar1.js            — SDF ray march, mushroom cap, domain-warped trunk
+    Pillar2.js            — SDF ray march, slender finger tip, leans left
+    Pillar3.js            — SDF ray march, twin peaks with waist erosion
+    JwstObserver.js       — Procedural JWST geometry (bonus feature)
+  utils/
+    makeCircleTexture.js  — Soft circular canvas texture for PointsMaterial
+  App.jsx                 — Scene wiring, spectral toggle state, HUD overlays
+
+public/
+  textures/
+    pillars_mask.png      — NASA Hubble PNG (Git LFS)
 ```
 
 ---
 
-## How the Rendering Works
+## Setup
 
-### VolumetricPillars.js, texture-masked ray march
-
-A large inverted sphere (`BackSide`, r=90) wraps the scene. The fragment shader casts a ray from the camera through each fragment and samples a NASA pillar photograph (`pillars_mask.png`) as a 2D density mask — image luminance determines whether gas exists at that world-space position. FBM noise warps the UV coordinates before sampling to break up linear banding.
-
-Density at each sample point:
+```bash
+npm install
+npm run dev       # → http://localhost:5173
+npm run build     # production bundle → dist/
+npm run preview   # serve dist/ locally
 ```
-density = maskLuminance × FBM(pos) × yFade × xFade × zFade
-```
-
-Color is selected per-step based on height and density, with two branches driven by `uMode` (0.0 = Hubble, 1.0 = Webb).
-
-### Pillar1.js - SDF ray march with domain warping
-
-Pillar 1 (the Elephant Trunk, leftmost) is a fully procedural signed distance field volume:
-
-**Shape primitives**
-- `sdCapsule` - trunk body and three finger peaks
-- `sdSphere` - mushroom cap, left-side bulge, EGG nodules at fingertips
-- `smin(k)` - smooth union melts all shapes together. High k at cap/trunk junction for heavy blending, low k at EGG nodules to keep them sharp
-
-**Domain warping**
-Two-layer FBM warp applied to position before any SDF evaluation:
-- Layer 1 (scale 0.20, amplitude 3.5) - large structural deformation, creates ridges and valleys
-- Layer 2 (scale 0.60, amplitude 1.2) - fine surface detail, creates fibrous texture
-
-**Density**
-```
-innerDensity = exp(-max(sdf, 0) * 0.5)
-outerWisp    = exp(-max(sdf, 0) * 0.35) * fbm(pos * 0.13)
-density      = max(innerDensity, outerWisp) * zFade * yFade
-```
-
-**Fresnel rim glow**
-Surface normal estimated from SDF gradient via 6-sample finite difference. Rim intensity = `pow(1 - |dot(rayDir, normal)|, 2.0)` — teal in Hubble mode, orange in Webb.
-
-**SDF-guided step size**
-`t += max(abs(sdfVal) * 0.3, 0.22)` near the surface, `max(abs(sdfVal) * 0.5, 0.55)` in empty space — sphere-marching style, converges faster than fixed steps.
-
-### FlyControls.js
-
-Pointer Lock API for desktop mouse look. Camera orientation stored as `yaw` and `pitch` floats, applied each frame as `THREE.Euler(pitch, yaw, 0, 'YXZ')` — no gimbal lock. Movement translates in camera-local space so forward is always where you're looking.
 
 ---
 
@@ -114,17 +74,38 @@ Pointer Lock API for desktop mouse look. Camera orientation stored as `yaw` and 
 
 ---
 
-## Setup
+## How the Rendering Works
 
-```bash
-npm install
-npm run dev       # → http://localhost:5173
-npm run build     # production bundle → dist/
-npm run preview   # serve dist/ locally
-```
+### SDF Ray March (Pillar1/2/3)
+
+Each pillar is a fully procedural signed distance field volume inside a BackSide sphere bounding box. The fragment shader sphere-marches from the camera position, evaluating the SDF at each step:
+
+- **Shape**: Smooth-union (`smin`) of capsules + spheres
+- **Domain warping**: Two-layer FBM warp before SDF evaluation — large structural ridges (scale 0.20, amp 3.5) + fine fibrous surface detail (scale 0.55, amp 0.9)
+- **Density**: `exp(-max(sdf, 0) * k)` inner core + FBM-modulated outer gas wisps
+- **Step size**: `max(|sdf| * 0.3, 0.22)` near surface, `max(|sdf| * 0.5, 0.55)` in empty space
+- **Normals**: 6-sample finite difference on SDF for Fresnel rim lighting
+- **Protostar glow**: Radial exponential falloff (`exp(-dist * k)`) at each pillar tip + soft halo
+
+### NebulaBgShader.js — Procedural Nebula Background
+
+A large BackSide sphere (r=480, renderOrder -100) runs 6-octave FBM with two-level domain warping to produce swirling filamentary structure:
+
+- **Hubble palette**: Deep space dark → OIII teal → bright cyan knots → SII gold base
+- **Webb palette**: Deep navy → dark blue filaments → medium navy → purple-navy accent
+
+### FlyControls.js
+
+Pointer Lock API for desktop mouse look. Orientation stored as `yaw`/`pitch` floats, applied as `THREE.Euler(pitch, yaw, 0, 'YXZ')` — no gimbal lock. Movement translates in camera-local space.
 
 ---
 
-## Textures
+## Tech Decisions
 
-`public/textures/pillars_mask.png` - NASA Hubble photograph used as a 2D density mask for the volumetric ray march. Tracked via Git LFS. The shader reads its luminance channel to determine gas density in world space, mapping image X to world X and image Y to world Y (portrait orientation, pillars run bottom to top).
+- GLSL embedded as JS template literals — no external `.glsl` files
+- SDF ray march for pillars — mesh geometry would look ceramic/hard-edged
+- `smin()` smooth union for organic shapes where primitives blend
+- Domain warping applied before SDF evaluation for fibrous/organic surface
+- Free-fly camera replaces OrbitControls — matches Solar System Scope feel
+- Pixel ratio capped at 1.0 for mobile performance
+- Git LFS for NASA texture asset

@@ -202,8 +202,10 @@ void main() {
         float baseWarm = smoothstep(10.0, -2.0, pos.y) * coreness;
         sampleCol += vec3(0.48, 0.20, 0.05) * baseWarm * 0.75;
 
-        float star = exp(-length(pos - vec3(-1.5, 26.5, 0.0)) * 2.2);
-        sampleCol += vec3(1.0, 0.82, 0.88) * star * 7.0;
+        float star = exp(-length(pos - vec3(-1.5, 26.5, 0.0)) * 1.4);
+        sampleCol += vec3(1.0, 0.97, 0.85) * star * 8.0;
+        float halo = exp(-length(pos - vec3(-1.5, 26.5, 0.0)) * 0.4);
+        sampleCol += vec3(0.8, 0.7, 0.4) * halo * 3.0;
 
         sampleCol *= 0.15 + 1.05 * clamp(pos.y / 28.0, 0.0, 1.0);
       } else {

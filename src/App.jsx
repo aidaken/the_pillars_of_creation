@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { SceneManager } from './scene/SceneManager'
 import { createStarField } from './scene/StarField'
-import { createVolumetricPillars, updateSpectralMode } from './scene/VolumetricPillars'
 import { createNebulaBgShader, setNebulaBgShaderMode, tickNebulaBgShader } from './scene/NebulaBgShader'
 import { addLights } from './scene/lights'
 import { createFlyControls } from './scene/FlyControls'
@@ -30,15 +29,14 @@ const hudCorner = {
 export default function App() {
   const canvasRef = useRef(null)
   const [spectralMode, setSpectralMode] = useState('hubble')
-  const [showHint, setShowHint] = useState(true)
-  const pillarMatRef = useRef(null)
+  const [hintOpacity, setHintOpacity] = useState(1)
   const nebulaBgRef = useRef(null)
   const pillar1Ref = useRef(null)
   const pillar2Ref = useRef(null)
   const pillar3Ref = useRef(null)
 
   useEffect(() => {
-    const t = setTimeout(() => setShowHint(false), 4000)
+    const t = setTimeout(() => setHintOpacity(0), 3000)
     return () => clearTimeout(t)
   }, [])
 
@@ -55,9 +53,6 @@ export default function App() {
 
     sceneManager.add(createStarField())
     addLights(sceneManager.scene)
-
-    const { mesh: pillarMesh, mat: pillarMat } = createVolumetricPillars(sceneManager.scene)
-    pillarMatRef.current = pillarMat
 
     const p1 = createPillar1(sceneManager.scene)
     p1.mesh.position.set(-30, 10, -4)
@@ -81,7 +76,6 @@ export default function App() {
       lastTime = now
       flyControls.tick()
       tickNebulaBgShader(nebulaBg.mat, delta)
-      pillarMat.uniforms.uCamPos.value.copy(sceneManager.camera.position).sub(pillarMesh.position)
       tickPillar1(p1.mat, p1.mesh, sceneManager.camera)
       tickPillar2(p2.mat, p2.mesh, sceneManager.camera)
       tickPillar3(p3.mat, p3.mesh, sceneManager.camera)
@@ -94,13 +88,20 @@ export default function App() {
       cancelAnimationFrame(rafId)
       flyControls.dispose()
       sceneManager.dispose()
+      // Dispose Three.js resources
+      ;[p1, p2, p3].forEach(p => {
+        p.mesh.geometry.dispose()
+        p.mat.dispose()
+      })
+      nebulaBg.mesh.geometry.dispose()
+      nebulaBg.mat.dispose()
+      sceneManager.renderer.dispose()
     }
   }, [])
 
   function handleToggle() {
     const next = spectralMode === 'hubble' ? 'webb' : 'hubble'
     setSpectralMode(next)
-    if (pillarMatRef.current)  updateSpectralMode(pillarMatRef.current, next)
     if (nebulaBgRef.current)   setNebulaBgShaderMode(nebulaBgRef.current.mat, next)
     if (pillar1Ref.current)    pillar1Ref.current.mat.uniforms.uMode.value = next === 'webb' ? 1.0 : 0.0
     if (pillar2Ref.current)    pillar2Ref.current.mat.uniforms.uMode.value = next === 'webb' ? 1.0 : 0.0
@@ -133,20 +134,19 @@ export default function App() {
         </div>
       </div>
       <SpectralToggle mode={spectralMode} onToggle={handleToggle} />
-      {showHint && (
-        <div style={{
-          position: 'fixed', top: 24, left: '50%',
-          transform: 'translateX(-50%)',
-          color: 'rgba(180,200,255,0.7)',
-          fontSize: 11, letterSpacing: 3,
-          fontFamily: 'monospace',
-          pointerEvents: 'none',
-          transition: 'opacity 1s',
-          zIndex: 40,
-        }}>
-          CLICK TO LOOK · WASD FLY · SPACE UP · SHIFT DOWN · Q/E/Z/C DIAGONAL · SCROLL ZOOM
-        </div>
-      )}
+      <div style={{
+        position: 'fixed', top: 24, left: '50%',
+        transform: 'translateX(-50%)',
+        color: 'rgba(180,200,255,0.7)',
+        fontSize: 11, letterSpacing: 3,
+        fontFamily: 'monospace',
+        pointerEvents: 'none',
+        opacity: hintOpacity,
+        transition: 'opacity 1.5s ease',
+        zIndex: 40,
+      }}>
+        CLICK TO LOOK · WASD MOVE · SPACE UP · SHIFT DOWN · SCROLL ZOOM
+      </div>
     </>
   )
 }

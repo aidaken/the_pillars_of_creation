@@ -102,12 +102,12 @@ const fragmentShader = /* glsl */`
     vec3 hubbleGold  = vec3(0.300, 0.170, 0.025);  // SII warm gold
     vec3 hubbleGreen = vec3(0.080, 0.190, 0.060);  // Hα green-gold
 
-    // ── Webb palette (NIRCam → rust / amber / cream) ────────────────────────
-    vec3 webbDark   = vec3(0.012, 0.008, 0.006);
-    vec3 webbRust   = vec3(0.340, 0.090, 0.015);
-    vec3 webbAmber  = vec3(0.560, 0.280, 0.040);
-    vec3 webbCream  = vec3(0.720, 0.480, 0.180);
-    vec3 webbDeep   = vec3(0.160, 0.040, 0.005);
+    // ── Webb palette (deep navy/blue) ────────────────────────────────────────
+    vec3 webbDark   = vec3(0.010, 0.020, 0.080);   // deep navy base
+    vec3 webbRust   = vec3(0.020, 0.040, 0.180);   // dark blue filament
+    vec3 webbAmber  = vec3(0.040, 0.080, 0.250);   // medium navy filament
+    vec3 webbCream  = vec3(0.080, 0.050, 0.200);   // purple-navy accent
+    vec3 webbDeep   = vec3(0.005, 0.010, 0.060);   // very deep navy
 
     vec3 col;
 
