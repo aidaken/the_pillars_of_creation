@@ -51,7 +51,7 @@ src/
 
 ## How the Rendering Works
 
-### VolumetricPillars.js — texture-masked ray march
+### VolumetricPillars.js, texture-masked ray march
 
 A large inverted sphere (`BackSide`, r=90) wraps the scene. The fragment shader casts a ray from the camera through each fragment and samples a NASA pillar photograph (`pillars_mask.png`) as a 2D density mask — image luminance determines whether gas exists at that world-space position. FBM noise warps the UV coordinates before sampling to break up linear banding.
 
