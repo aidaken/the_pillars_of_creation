@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { SceneManager } from './scene/SceneManager'
 import { createStarField } from './scene/StarField'
 import { createVolumetricPillars, updateSpectralMode } from './scene/VolumetricPillars'
-import { createNebulaBg, setNebulaMode } from './scene/NebulaBg'
+import { createNebulaBgShader, setNebulaBgShaderMode, tickNebulaBgShader } from './scene/NebulaBgShader'
 import { addLights } from './scene/lights'
 import { createFlyControls } from './scene/FlyControls'
 import { createPillar1, tickPillar1 } from './scene/Pillar1'
@@ -50,8 +50,8 @@ export default function App() {
     sceneManager.camera.position.set(0, 11, 96)
     sceneManager.camera.lookAt(0, 8.5, 6)
 
-    const bgRefs = createNebulaBg(sceneManager.scene)
-    nebulaBgRef.current = bgRefs
+    const nebulaBg = createNebulaBgShader(sceneManager.scene)
+    nebulaBgRef.current = nebulaBg
 
     sceneManager.add(createStarField())
     addLights(sceneManager.scene)
@@ -73,10 +73,14 @@ export default function App() {
 
     const jwst = createJwstObserver(sceneManager.scene)
 
-    let rafId
+    let rafId, lastTime = performance.now()
     const tick = () => {
       rafId = requestAnimationFrame(tick)
+      const now = performance.now()
+      const delta = now - lastTime
+      lastTime = now
       flyControls.tick()
+      tickNebulaBgShader(nebulaBg.mat, delta)
       pillarMat.uniforms.uCamPos.value.copy(sceneManager.camera.position).sub(pillarMesh.position)
       tickPillar1(p1.mat, p1.mesh, sceneManager.camera)
       tickPillar2(p2.mat, p2.mesh, sceneManager.camera)
@@ -97,7 +101,7 @@ export default function App() {
     const next = spectralMode === 'hubble' ? 'webb' : 'hubble'
     setSpectralMode(next)
     if (pillarMatRef.current)  updateSpectralMode(pillarMatRef.current, next)
-    if (nebulaBgRef.current)   setNebulaMode(nebulaBgRef.current, next)
+    if (nebulaBgRef.current)   setNebulaBgShaderMode(nebulaBgRef.current.mat, next)
     if (pillar1Ref.current)    pillar1Ref.current.mat.uniforms.uMode.value = next === 'webb' ? 1.0 : 0.0
     if (pillar2Ref.current)    pillar2Ref.current.mat.uniforms.uMode.value = next === 'webb' ? 1.0 : 0.0
     if (pillar3Ref.current)    pillar3Ref.current.mat.uniforms.uMode.value = next === 'webb' ? 1.0 : 0.0

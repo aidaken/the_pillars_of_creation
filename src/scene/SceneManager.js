@@ -15,7 +15,6 @@ export class SceneManager {
     this._container = container
 
     this.scene = new THREE.Scene()
-    this.scene.background = new THREE.Color(0x03050f)
     this.scene.fog = new THREE.FogExp2(0x03050f, 0.003)
 
     this.camera = new THREE.PerspectiveCamera(
